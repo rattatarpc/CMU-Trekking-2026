@@ -109,6 +109,16 @@
   </style>
   <!-- html2pdf.js for Client-side PDF Generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    #qrReader { width: 100% !important; max-height: 290px !important; }
+    #qrReader img, #qrReader video, #qrReader canvas {
+      max-width: 100% !important;
+      max-height: 280px !important;
+      object-fit: contain !important;
+      margin: 0 auto !important;
+      border-radius: 12px !important;
+    }
+  </style>
 </head>
 
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-purple-100 selection:text-cmu-purple overflow-x-hidden w-full max-w-full">
@@ -6879,34 +6889,54 @@
   <!-- ========================================== -->
   <!-- MODAL: QR CODE SCANNER                     -->
   <!-- ========================================== -->
-  <div id="qrScannerModal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200">
-      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-white">
-        <h3 class="font-bold text-slate-800 text-base">Scan QR Code</h3>
-        <button type="button" onclick="closeQrScannerModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+  <div id="qrScannerModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200">
+      <div class="p-3.5 sm:p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-cmu-purple animate-pulse"></span>
+          <h3 class="font-bold text-slate-800 text-base">Scan QR Code</h3>
+        </div>
+        <button type="button" onclick="closeQrScannerModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg active:scale-95 transition">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div class="p-4 space-y-3.5">
-        <div id="qrReaderContainer" class="w-full rounded-xl overflow-hidden bg-slate-900 border-2 border-dashed border-purple-300 min-h-[260px] flex items-center justify-center relative">
-          <div id="qrReader" class="w-full"></div>
+      <div class="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+        <!-- Error / Warning Alert Box -->
+        <div id="qrAlertBox" class="hidden bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-xl p-3 flex items-start gap-2.5">
+          <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div class="flex-1">
+            <p id="qrAlertMsg" class="font-semibold text-amber-800">ไม่สามารถอ่าน QR Code ได้</p>
+            <p class="text-[11px] text-amber-700 mt-0.5">ภาพอาจเบลอ ย้อนแสง หรือไม่พบโค้ด กรุณาลองถ่ายใหม่อีกครั้ง</p>
+          </div>
         </div>
-        <p id="qrStatusText" class="text-xs text-center text-slate-500">เล็งกล้องไปที่ QR Code ของผู้ป่วยเพื่อดึงข้อมูลอัตโนมัติ</p>
 
-        <!-- Fallback: Scan from image/camera snapshot -->
-        <div class="pt-1 flex items-center gap-2">
+        <div id="qrReaderContainer" class="w-full rounded-2xl overflow-hidden bg-slate-950 border-2 border-dashed border-purple-300 min-h-[240px] max-h-[300px] flex items-center justify-center relative shadow-inner">
+          <div id="qrReader" class="w-full flex items-center justify-center overflow-hidden"></div>
+        </div>
+
+        <p id="qrStatusText" class="text-xs text-center text-slate-500 font-medium px-2">เล็งกล้องไปที่ QR Code ของนักศึกษาเพื่อดึงข้อมูลอัตโนมัติ</p>
+
+        <!-- Actions -->
+        <div class="pt-1 grid grid-cols-2 gap-2">
           <input type="file" id="qrFileInput" accept="image/*" capture="environment" class="hidden" onchange="handleQrFileSelect(event)">
-          <button type="button" onclick="document.getElementById('qrFileInput').click()" class="w-full bg-purple-50 hover:bg-purple-100 text-cmu-purple border border-purple-200 font-semibold py-2.5 rounded-xl text-xs transition">
-            ถ่ายภาพ QR / เลือกรูปจากเครื่อง
+          <button type="button" onclick="document.getElementById('qrFileInput').click()" class="w-full bg-purple-50 hover:bg-purple-100 text-cmu-purple border border-purple-200 font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 active:scale-95 shadow-xs">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            <span>ถ่ายภาพ QR</span>
+          </button>
+          <button type="button" onclick="startLiveCamera()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 active:scale-95 shadow-xs">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            <span>เปิดกล้องสดใหม่</span>
           </button>
         </div>
       </div>
 
-      <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-end">
-        <button type="button" onclick="closeQrScannerModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-5 py-2 rounded-xl text-xs transition">
+      <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-end shrink-0">
+        <button type="button" onclick="closeQrScannerModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-5 py-2 rounded-xl text-xs transition active:scale-95">
           Close
         </button>
       </div>
@@ -6952,7 +6982,16 @@
       if (!modal) return;
       modal.classList.remove('hidden');
 
+      const alertEl = document.getElementById('qrAlertBox');
+      if (alertEl) alertEl.classList.add('hidden');
+
+      startLiveCamera();
+    }
+
+    function startLiveCamera() {
       const statusEl = document.getElementById('qrStatusText');
+      const alertEl = document.getElementById('qrAlertBox');
+      if (alertEl) alertEl.classList.add('hidden');
       if (statusEl) statusEl.textContent = 'กำลังเปิดกล้องสแกน QR Code...';
 
       if (typeof Html5Qrcode === 'undefined') {
@@ -6960,31 +6999,41 @@
         return;
       }
 
-      setTimeout(() => {
+      const runStart = () => {
         try {
-          if (!html5QrScannerInstance) {
-            html5QrScannerInstance = new Html5Qrcode('qrReader');
-          }
+          const readerEl = document.getElementById('qrReader');
+          if (readerEl) readerEl.innerHTML = '';
+
+          html5QrScannerInstance = new Html5Qrcode('qrReader');
           html5QrScannerInstance.start(
             { facingMode: 'environment' },
-            { fps: 10, qrbox: { width: 230, height: 230 } },
+            { fps: 15, qrbox: { width: 220, height: 220 } },
             onQrScanSuccess,
             () => {}
           ).then(() => {
-            if (statusEl) statusEl.textContent = 'เล็งกล้องไปที่ QR Code ของผู้ป่วย (รหัส|ชื่อ|สกุล|คณะ|ชั้นปี|เพศ|โรคประจำตัว|แพ้ยา)';
+            if (statusEl) statusEl.textContent = 'เล็งกล้องไปที่ QR Code ของนักศึกษา';
           }).catch(err => {
             console.warn('Camera start warning:', err);
-            if (statusEl) statusEl.textContent = 'ไม่สามารถเปิดกล้องสดได้ กรุณากดปุ่ม "ถ่ายภาพ QR / เลือกรูปจากเครื่อง" ด้านล่าง';
+            if (statusEl) statusEl.textContent = 'ไม่สามารถเปิดกล้องสดได้ กรุณากดปุ่ม "ถ่ายภาพ QR" ด้านล่าง';
           });
         } catch (e) {
           console.warn('QR Scanner init error:', e);
         }
-      }, 150);
+      };
+
+      if (html5QrScannerInstance && html5QrScannerInstance.isScanning) {
+        html5QrScannerInstance.stop().then(runStart).catch(runStart);
+      } else {
+        runStart();
+      }
     }
 
     function closeQrScannerModal() {
       const modal = document.getElementById('qrScannerModal');
       if (modal) modal.classList.add('hidden');
+
+      const alertEl = document.getElementById('qrAlertBox');
+      if (alertEl) alertEl.classList.add('hidden');
 
       if (html5QrScannerInstance) {
         try {
@@ -6998,25 +7047,48 @@
     function handleQrFileSelect(event) {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
+
       const statusEl = document.getElementById('qrStatusText');
-      if (statusEl) statusEl.textContent = 'กำลังอ่านข้อมูลจากภาพถ่าย...';
+      const alertEl = document.getElementById('qrAlertBox');
+      const alertMsg = document.getElementById('qrAlertMsg');
+      if (alertEl) alertEl.classList.add('hidden');
+      if (statusEl) statusEl.textContent = 'กำลังประมวลผลและอ่าน QR จากภาพถ่าย...';
 
       if (typeof Html5Qrcode === 'undefined') {
-        alert('ไม่สามารถโหลดตัวอ่าน QR ได้ กรุณาตรวจสอบอินเทอร์เน็ต');
+        if (alertEl && alertMsg) {
+          alertMsg.textContent = 'ไม่พบไลบรารีอ่าน QR กรุณาตรวจสอบอินเทอร์เน็ต';
+          alertEl.classList.remove('hidden');
+        }
         return;
       }
 
       const executeScanFile = () => {
-        if (!html5QrScannerInstance) {
-          html5QrScannerInstance = new Html5Qrcode('qrReader');
+        // Use an isolated temporary div for file scanning so #qrReader is never dirtied or frozen
+        let tempDiv = document.getElementById('qrTempFileScanner');
+        if (!tempDiv) {
+          tempDiv = document.createElement('div');
+          tempDiv.id = 'qrTempFileScanner';
+          tempDiv.style.display = 'none';
+          document.body.appendChild(tempDiv);
         }
-        html5QrScannerInstance.scanFile(file, true)
+
+        const fileScanner = new Html5Qrcode('qrTempFileScanner');
+        // CRITICAL: showImage = false so the large camera photo is NEVER injected into the DOM
+        fileScanner.scanFile(file, false)
           .then(decodedText => {
+            try { fileScanner.clear(); } catch(e) {}
             onQrScanSuccess(decodedText);
           })
           .catch(err => {
-            alert('ไม่พบ QR Code ในภาพ หรือภาพไม่ชัดเจน กรุณาลองถ่ายใหม่อีกครั้ง');
-            if (statusEl) statusEl.textContent = 'ไม่พบ QR Code ในภาพ กรุณาลองใหม่อีกครั้ง';
+            try { fileScanner.clear(); } catch(e) {}
+            console.warn('Scan file error:', err);
+            if (alertEl && alertMsg) {
+              alertMsg.textContent = 'ไม่พบ QR Code ในภาพ หรือภาพเบลอ/ย้อนแสง';
+              alertEl.classList.remove('hidden');
+            }
+            if (statusEl) statusEl.textContent = 'อ่านภาพไม่สำเร็จ กรุณากดถ่ายใหม่ หรือเล็งกล้องสด';
+            // Instantly restore live camera viewfinder so user is never frozen
+            startLiveCamera();
           });
       };
 
