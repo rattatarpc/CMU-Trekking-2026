@@ -6917,8 +6917,8 @@
     // =========================================================================
     // GITHUB PAGES <-> GOOGLE APPS SCRIPT API BRIDGE & QR CODE SCANNER
     // =========================================================================
-    // ใส่ URL ของ Google Apps Script Web App (/exec) ที่นี่เมื่อนำขึ้น GitHub Pages
-    const GAS_WEB_APP_URL = localStorage.getItem('cmu_gas_api_url') || '';
+    // URL ของ Google Apps Script Web App (/exec)
+    const GAS_WEB_APP_URL = localStorage.getItem('cmu_gas_api_url') || 'https://script.google.com/macros/s/AKfycbwlgSc25ov60fDHTbnluUGeRcPh6S7fz74K8lz5R4n1Gyd5P1fPK_TB2KQpzqX69udYeg/exec';
 
     // Universal Bridge: If running on GitHub Pages (outside GAS iframe) and GAS_WEB_APP_URL is configured
     if ((typeof google === 'undefined' || !google.script || !google.script.run) && GAS_WEB_APP_URL) {
@@ -6926,6 +6926,8 @@
         const callApi = (action, payload) => {
           fetch(GAS_WEB_APP_URL, {
             method: 'POST',
+            redirect: 'follow',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action, payload })
           })
             .then(r => r.json())
