@@ -71,14 +71,97 @@
       line-height: 1.5;
     }
     
+    /* Craft Floor: Theme browser surfaces */
+    ::selection {
+      background-color: #f3e8ff;
+      color: #581c87;
     }
+    input, textarea {
+      caret-color: #7e22ce;
+    }
+    .tnum, [id*="Kpi"], [id*="Count"], [id*="Badge"], .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Sleek Themed Scrollbar */
     .custom-scrollbar::-webkit-scrollbar {
       height: 6px;
       width: 6px;
     }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
     .custom-scrollbar::-webkit-scrollbar-thumb {
       background: #cbd5e1;
       border-radius: 999px;
+      transition: background-color 0.2s ease;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #a855f7;
+    }
+
+    /* Tactile Micro-Interactions & Card Lift */
+    .card-lift {
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .card-lift:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.06), 0 6px 8px -4px rgba(0, 0, 0, 0.04);
+    }
+    .touch-spring {
+      transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+    }
+    .touch-spring:active {
+      transform: scale(0.96);
+    }
+
+    /* Authored Motion Keyframes */
+    @keyframes scaleBump {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.22); }
+      100% { transform: scale(1); }
+    }
+    .animate-scale-bump {
+      animation: scaleBump 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes pillPop {
+      0% { transform: scale(0.92); }
+      60% { transform: scale(1.04); }
+      100% { transform: scale(1); }
+    }
+    .animate-pill-pop {
+      animation: pillPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes toastEntrance {
+      0% { opacity: 0; transform: translate(-50%, 16px) scale(0.94); }
+      100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    }
+    .animate-toast {
+      animation: toastEntrance 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes pulseRing {
+      0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
+      70% { box-shadow: 0 0 0 8px rgba(168, 85, 247, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+    }
+    .ring-active-pulse {
+      animation: pulseRing 1.8s infinite;
+    }
+
+    /* Accessibility: Respect Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .card-lift:hover {
+        transform: none !important;
+      }
     }
     /* TV Mode styles */
     .tv-mode header { padding: 10px 24px; }
@@ -126,7 +209,7 @@
   <!-- Network Offline Alert Banner with Retry -->
   <div id="offlineBanner" class="hidden bg-red-600 text-white text-sm font-semibold px-4 py-2.5 shadow-md flex items-center justify-between sticky top-0 z-50 transition-all">
     <div class="flex items-center gap-2">
-      <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+      <span class="w-2.5 h-2.5 rounded-full bg-white shrink-0"></span>
       <span>Connection Offline: Data saved locally</span>
     </div>
     <div class="flex items-center gap-2">
@@ -138,7 +221,13 @@
   </div>
 
   <!-- Toast Notification -->
-  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-xl opacity-0 pointer-events-none transition-all duration-300"></div>
+  <!-- MODERN FLOATING TOAST NOTIFICATION (Delight & Clarity) -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-900/95 backdrop-blur-md text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-2xl border border-white/10 opacity-0 pointer-events-none transition-all duration-300 transform translate-y-4">
+    <div id="toastIcon" class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <span id="toastMsg" class="font-thai text-sm">Action completed</span>
+  </div>
 
   <!-- Top Header Navigation (Balanced on Mobile & Desktop - Request 1) -->
   <header class="bg-cmu-purple text-white shadow-lg sticky top-0 z-40">
@@ -258,7 +347,7 @@
         <div onclick="toggleStaffLogisticsBox()" class="p-3.5 sm:p-4 bg-slate-50/80 hover:bg-purple-50/50 cursor-pointer flex items-center justify-between transition select-none">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-cmu-purple"></span>
-            <h4 class="text-xs sm:text-sm font-bold text-slate-800">Staff & Ambulance</h4>
+            <h3 class="text-xs sm:text-sm font-bold text-slate-800">Staff & Ambulance</h3>
           </div>
           <div class="flex items-center gap-2 text-slate-400">
             <span class="text-[11px] text-slate-400 font-normal hidden sm:inline">Click to toggle</span>
@@ -290,49 +379,49 @@
         </div>
       </div>
 
-      <!-- Station KPI Mini Cards (6 Cards) -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5">
-        <div class="bg-white rounded-xl p-3 sm:p-4 border border-slate-200 shadow-sm">
+      <!-- Station KPI Mini Cards (6 Cards - Interactive Click to Filter) -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5" id="stationKpiCardsContainer">
+        <div onclick="filterStationByStatus('ALL')" data-status="ALL" title="Click to view all cases" class="st-kpi-card bg-white rounded-xl p-3 sm:p-4 border border-slate-200 shadow-sm cursor-pointer card-lift touch-spring select-none transition-all">
           <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Cases</div>
           <div class="flex items-baseline gap-1.5 mt-1">
-            <span id="stKpiTotal" class="text-2xl sm:text-3xl font-black text-slate-800 font-sans">0</span>
+            <span id="stKpiTotal" class="text-2xl sm:text-3xl font-black text-slate-800 font-sans tabular-nums">0</span>
             <span class="text-xs sm:text-sm font-semibold text-slate-500">Cases</span>
           </div>
         </div>
-        <div class="bg-blue-50 rounded-xl p-3 sm:p-4 border border-blue-200 shadow-sm ring-1 ring-blue-400/30">
+        <div onclick="filterStationByStatus('ACTIVE')" data-status="ACTIVE" title="Click to filter Active cases" class="st-kpi-card bg-blue-50 rounded-xl p-3 sm:p-4 border border-blue-200 shadow-sm ring-1 ring-blue-400/30 cursor-pointer card-lift touch-spring select-none transition-all">
           <div class="text-xs text-blue-800 font-semibold uppercase tracking-wider flex items-center justify-between">
             <span>Active in Station</span>
           </div>
           <div class="flex items-baseline gap-1.5 mt-1">
-            <span id="stKpiActive" class="text-2xl sm:text-3xl font-black text-blue-800 font-sans">0</span>
+            <span id="stKpiActive" class="text-2xl sm:text-3xl font-black text-blue-800 font-sans tabular-nums">0</span>
             <span class="text-xs sm:text-sm font-semibold text-blue-600">Cases</span>
           </div>
         </div>
-        <div class="bg-amber-50 rounded-xl p-3 sm:p-4 border border-amber-200 shadow-sm">
+        <div onclick="filterStationByStatus('MINOR')" data-status="MINOR" title="Click to filter Minor cases" class="st-kpi-card bg-amber-50 rounded-xl p-3 sm:p-4 border border-amber-200 shadow-sm cursor-pointer card-lift touch-spring select-none transition-all">
           <div class="text-xs text-amber-800 font-semibold uppercase tracking-wider">Minor Case</div>
           <div class="flex items-baseline gap-1.5 mt-1">
-            <span id="stKpiMinor" class="text-2xl sm:text-3xl font-black text-amber-700 font-sans">0</span>
+            <span id="stKpiMinor" class="text-2xl sm:text-3xl font-black text-amber-700 font-sans tabular-nums">0</span>
             <span class="text-xs sm:text-sm font-semibold text-amber-600">Cases</span>
           </div>
         </div>
-        <div class="bg-emerald-50 rounded-xl p-3 sm:p-4 border border-emerald-200 shadow-sm">
+        <div onclick="filterStationByStatus('Return to Activity')" data-status="Return to Activity" title="Click to filter Return cases" class="st-kpi-card bg-emerald-50 rounded-xl p-3 sm:p-4 border border-emerald-200 shadow-sm cursor-pointer card-lift touch-spring select-none transition-all">
           <div class="text-xs text-emerald-800 font-semibold uppercase tracking-wider">Return to Activity</div>
           <div class="flex items-baseline gap-1.5 mt-1">
-            <span id="stKpiReturn" class="text-2xl sm:text-3xl font-black text-emerald-700 font-sans">0</span>
+            <span id="stKpiReturn" class="text-2xl sm:text-3xl font-black text-emerald-700 font-sans tabular-nums">0</span>
             <span class="text-xs sm:text-sm font-semibold text-emerald-600">Cases</span>
           </div>
         </div>
-        <div class="bg-slate-100 rounded-xl p-3 sm:p-4 border border-slate-200 shadow-sm">
+        <div onclick="filterStationByStatus('Withdraw')" data-status="Withdraw" title="Click to filter Withdraw cases" class="st-kpi-card bg-slate-100 rounded-xl p-3 sm:p-4 border border-slate-200 shadow-sm cursor-pointer card-lift touch-spring select-none transition-all">
           <div class="text-xs text-slate-600 font-semibold uppercase tracking-wider">Withdraw</div>
           <div class="flex items-baseline gap-1.5 mt-1">
-            <span id="stKpiWithdraw" class="text-2xl sm:text-3xl font-black text-slate-700 font-sans">0</span>
+            <span id="stKpiWithdraw" class="text-2xl sm:text-3xl font-black text-slate-700 font-sans tabular-nums">0</span>
             <span class="text-xs sm:text-sm font-semibold text-slate-500">Cases</span>
           </div>
         </div>
-        <div class="bg-purple-50 rounded-xl p-3 sm:p-4 border border-purple-200 shadow-sm">
+        <div onclick="filterStationByStatus('Transfer to hospital')" data-status="Transfer to hospital" title="Click to filter Transfer cases" class="st-kpi-card bg-purple-50 rounded-xl p-3 sm:p-4 border border-purple-200 shadow-sm cursor-pointer card-lift touch-spring select-none transition-all">
           <div class="text-xs text-purple-800 font-semibold uppercase tracking-wider">Transfer</div>
           <div class="flex items-baseline gap-1.5 mt-1">
-            <span id="stKpiTransfer" class="text-2xl sm:text-3xl font-black text-purple-700 font-sans">0</span>
+            <span id="stKpiTransfer" class="text-2xl sm:text-3xl font-black text-purple-700 font-sans tabular-nums">0</span>
             <span class="text-xs sm:text-sm font-semibold text-purple-600">Cases</span>
           </div>
         </div>
@@ -365,13 +454,15 @@
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
           <div class="relative flex-1">
-            <input type="text" id="stationSearchInput" oninput="renderStationCases()" placeholder="Search: Student ID, Diagnosis..." class="w-full bg-white rounded-xl border border-slate-300 px-3.5 py-2 pl-9 text-sm focus:ring-2 focus:ring-cmu-purple focus:outline-none">
-            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <input type="text" id="stationSearchInput" oninput="onStationSearchChanged(this.value)" placeholder="Search: Student ID, Diagnosis..." class="w-full bg-white rounded-xl border border-slate-300 px-3.5 py-2 pl-9 pr-9 text-sm focus:ring-2 focus:ring-cmu-purple focus:outline-none transition">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
+            <button id="stationSearchClear" type="button" onclick="clearStationSearch()" class="hidden absolute right-3 top-2.5 w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-xs font-bold transition active:scale-95" title="Clear search">✕</button>
           </div>
-          <div class="text-xs text-slate-500 font-medium">
+          <div class="text-xs text-slate-500 font-medium flex items-center justify-between sm:justify-end gap-2">
             <span id="stationCaseCountText">Station Cases</span>
+            <button id="stationResetFilterBtn" type="button" onclick="clearStationSearchAndFilter()" class="hidden text-xs text-cmu-purple font-bold hover:underline">Show All</button>
           </div>
         </div>
 
@@ -598,10 +689,11 @@
             </div>
             <!-- Search (Fills row, stays on same row) -->
             <div class="relative flex-1 md:w-56">
-              <input type="text" id="cmdSearchInput" oninput="renderCommandCases()" placeholder="Search Student ID, Diagnosis..." class="w-full bg-white border border-slate-300 text-xs sm:text-sm rounded-xl px-3 py-2 pl-8 focus:ring-2 focus:ring-cmu-purple focus:outline-none">
-              <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <input type="text" id="cmdSearchInput" oninput="onCmdSearchChanged(this.value)" placeholder="Search Student ID, Diagnosis..." class="w-full bg-white border border-slate-300 text-xs sm:text-sm rounded-xl px-3 py-2 pl-8 pr-8 focus:ring-2 focus:ring-cmu-purple focus:outline-none transition">
+              <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
+              <button id="cmdSearchClear" type="button" onclick="clearCmdSearch()" class="hidden absolute right-2.5 top-2 w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-[10px] font-bold transition active:scale-95" title="Clear search">✕</button>
             </div>
           </div>
         </div>
@@ -638,7 +730,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">Recored by</label>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Recorded by</label>
             <input type="text" id="minor_Staff_Name" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-cmu-purple focus:outline-none">
           </div>
         </div>
@@ -750,7 +842,7 @@
 
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="block text-xs font-semibold text-slate-700">Recored by</label>
+                <label class="block text-xs font-semibold text-slate-700">Recorded by</label>
                 <button type="button" onclick="openCheckinModal()" class="text-[10px] text-cmu-purple hover:underline font-semibold">Change</button>
               </div>
               <input type="text" id="field_Staff_Name" placeholder="Staff Name" class="w-full bg-purple-50/60 border border-purple-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-cmu-purple focus:outline-none">
@@ -2986,6 +3078,9 @@
       let val = parseInt(el.value, 10) || 0;
       val = Math.max(0, val + delta);
       el.value = val;
+      el.classList.remove('animate-scale-bump');
+      void el.offsetWidth;
+      el.classList.add('animate-scale-bump');
       updateMinorTotalBadge();
     }
 
@@ -2997,7 +3092,12 @@
         if (el) total += (parseInt(el.value, 10) || 0);
       });
       const badge = document.getElementById('minorTotalCountBadge');
-      if (badge) badge.textContent = total;
+      if (badge) {
+        badge.textContent = total;
+        badge.classList.remove('animate-scale-bump');
+        void badge.offsetWidth;
+        badge.classList.add('animate-scale-bump');
+      }
     }
 
     function submitMinorCaseForm(e) {
@@ -3290,14 +3390,14 @@
       const otherInput = document.getElementById('field_Diagnosis_Other');
 
       if (isActive) {
-        btn.classList.remove('active', 'bg-cmu-purple', 'text-white', 'border-cmu-purple');
+        btn.classList.remove('active', 'bg-cmu-purple', 'text-white', 'border-cmu-purple', 'animate-pill-pop', 'shadow-md', 'ring-2', 'ring-purple-300');
         btn.classList.add('bg-slate-50', 'text-slate-700', 'border-slate-200');
         if (isOther && otherWrapper) {
           otherWrapper.classList.add('hidden');
           if (otherInput) otherInput.value = '';
         }
       } else {
-        btn.classList.add('active', 'bg-cmu-purple', 'text-white', 'border-cmu-purple');
+        btn.classList.add('active', 'bg-cmu-purple', 'text-white', 'border-cmu-purple', 'animate-pill-pop', 'shadow-md', 'ring-2', 'ring-purple-300');
         btn.classList.remove('bg-slate-50', 'text-slate-700', 'border-slate-200');
         if (isOther && otherWrapper) {
           otherWrapper.classList.remove('hidden');
@@ -3488,6 +3588,99 @@
       }
     }
 
+    // ==========================================
+    // UI/UX DELIGHT HELPERS (Impeccable Polish)
+    // ==========================================
+    function filterStationByStatus(status) {
+      if (APP_STATE.stationStatusFilter === status) {
+        APP_STATE.stationStatusFilter = 'ALL';
+      } else {
+        APP_STATE.stationStatusFilter = status;
+      }
+      renderStationCases();
+      const listEl = document.getElementById('stationCaseList');
+      if (listEl && window.innerWidth < 768) {
+        listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function onStationSearchChanged(val) {
+      const clearBtn = document.getElementById('stationSearchClear');
+      if (clearBtn) {
+        if (val && val.length > 0) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+      }
+      renderStationCases();
+    }
+
+    function clearStationSearch() {
+      const s = document.getElementById('stationSearchInput');
+      if (s) { s.value = ''; s.focus(); }
+      const clearBtn = document.getElementById('stationSearchClear');
+      if (clearBtn) clearBtn.classList.add('hidden');
+      renderStationCases();
+    }
+
+    function clearStationSearchAndFilter() {
+      const s = document.getElementById('stationSearchInput');
+      if (s) s.value = '';
+      APP_STATE.stationStatusFilter = 'ALL';
+      const clearBtn = document.getElementById('stationSearchClear');
+      if (clearBtn) clearBtn.classList.add('hidden');
+      renderStationCases();
+    }
+
+    function onCmdSearchChanged(val) {
+      const clearBtn = document.getElementById('cmdSearchClear');
+      if (clearBtn) {
+        if (val && val.length > 0) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+      }
+      renderCommandCases();
+    }
+
+    function clearCmdSearch() {
+      const s = document.getElementById('cmdSearchInput');
+      if (s) { s.value = ''; s.focus(); }
+      const clearBtn = document.getElementById('cmdSearchClear');
+      if (clearBtn) clearBtn.classList.add('hidden');
+      renderCommandCases();
+    }
+
+    function clearCmdSearchAndFilters() {
+      const s = document.getElementById('cmdSearchInput');
+      if (s) s.value = '';
+      const st = document.getElementById('cmdFilterStatus');
+      if (st) st.value = 'ALL';
+      APP_STATE.activeOnlyFilter = false;
+      const clearBtn = document.getElementById('cmdSearchClear');
+      if (clearBtn) clearBtn.classList.add('hidden');
+      renderCommandCases();
+    }
+
+    function copyToClipboard(text, msg = 'Copied to clipboard!') {
+      if (!text) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast(msg, 'success')).catch(() => fallbackCopy(text, msg));
+      } else {
+        fallbackCopy(text, msg);
+      }
+    }
+
+    function fallbackCopy(text, msg) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast(msg, 'success');
+      } catch (err) {}
+      document.body.removeChild(ta);
+    }
+
 
     // ==========================================
     // RENDER: FIELD STATION VIEW (Mini KPIs & Cases)
@@ -3508,11 +3701,37 @@
         return false;
       });
 
+      const statusFilter = APP_STATE.stationStatusFilter || 'ALL';
       const filtered = stCases.filter(c => {
-        if (!search) return true;
-        const text = `${c.Case_ID} ${c.Student_ID} ${c.Diagnosis} ${c.Patient_Name}`.toLowerCase();
-        return text.includes(search);
+        if (search) {
+          const text = `${c.Case_ID} ${c.Student_ID} ${c.Diagnosis} ${c.Patient_Name}`.toLowerCase();
+          if (!text.includes(search)) return false;
+        }
+        if (statusFilter === 'ALL') return true;
+        const isMinor = isMinorCase(c);
+        if (statusFilter === 'MINOR') return isMinor;
+        if (isMinor) return false;
+        if (statusFilter === 'ACTIVE') {
+          return (!c.Disposition || c.Disposition === 'During Treatment' || c.Status === 'Active');
+        }
+        return c.Disposition === statusFilter;
       });
+
+      // Highlight active KPI Card
+      document.querySelectorAll('.st-kpi-card').forEach(card => {
+        const targetStatus = card.getAttribute('data-status');
+        if (targetStatus && targetStatus === statusFilter && targetStatus !== 'ALL') {
+          card.classList.add('ring-2', 'ring-cmu-purple', 'ring-offset-1', 'shadow-md');
+        } else {
+          card.classList.remove('ring-2', 'ring-cmu-purple', 'ring-offset-1', 'shadow-md');
+        }
+      });
+
+      const resetFilterBtn = document.getElementById('stationResetFilterBtn');
+      if (resetFilterBtn) {
+        if (statusFilter !== 'ALL' || search) resetFilterBtn.classList.remove('hidden');
+        else resetFilterBtn.classList.add('hidden');
+      }
 
       // Mini KPI Counts (Req 2 & 7)
       let totalStationCount = 0;
@@ -3557,7 +3776,10 @@
       if (kpiMinor) kpiMinor.textContent = minorStationCount;
       if (kpiWithdraw) kpiWithdraw.textContent = withdrawStationCount;
       if (kpiTransfer) kpiTransfer.textContent = transferStationCount;
-      if (caseCountText) caseCountText.textContent = `Station Cases (${filtered.length})`;
+      if (caseCountText) {
+        const filterBadge = (statusFilter !== 'ALL') ? ` • <span class="text-cmu-purple font-semibold font-sans">${statusFilter}</span>` : '';
+        caseCountText.innerHTML = `Showing <b class="text-slate-800 font-bold">${filtered.length}</b> cases${filterBadge}`;
+      }
 
       // Render Station Charts (Disposition + Diagnosis)
       renderStationCharts(targetCode, stCases);
@@ -3565,9 +3787,15 @@
       const container = document.getElementById('stationCaseList');
       if (filtered.length === 0) {
         container.innerHTML = `
-          <div class="p-8 text-center text-slate-400">
-            <p class="font-medium text-sm">No cases recorded for this station</p>
-            <p class="text-xs text-slate-400 mt-1">คลิก "+ Add Minor Case" หรือ "+ Add New Case" ด้านบนเพื่อบันทึกข้อมูล</p>
+          <div class="py-12 px-4 text-center flex flex-col items-center justify-center">
+            <div class="w-14 h-14 rounded-2xl bg-purple-50 text-cmu-purple flex items-center justify-center mb-3 shadow-inner">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+              </svg>
+            </div>
+            <p class="font-bold text-slate-700 text-sm mb-1">No matching cases</p>
+            <p class="text-xs text-slate-400 max-w-xs mb-3">No patient records match the current filter or search query.</p>
+            ${(search || statusFilter !== 'ALL') ? `<button type="button" onclick="clearStationSearchAndFilter()" class="text-xs font-bold bg-purple-100 hover:bg-purple-200 text-cmu-purple px-4 py-2 rounded-xl transition active:scale-95 shadow-sm">Reset Search & Filters</button>` : ''}
           </div>
         `;
         return;
@@ -4922,7 +5150,18 @@
 
       const container = document.getElementById('cmdMasterCaseList');
       if (filtered.length === 0) {
-        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">${APP_STATE.activeOnlyFilter ? 'No active cases in this station' : 'No cases recorded for this filter'}</div>`;
+        container.innerHTML = `
+          <div class="py-12 px-4 text-center flex flex-col items-center justify-center">
+            <div class="w-14 h-14 rounded-2xl bg-purple-50 text-cmu-purple flex items-center justify-center mb-3 shadow-inner">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+              </svg>
+            </div>
+            <p class="font-bold text-slate-700 text-sm mb-1">${APP_STATE.activeOnlyFilter ? 'No active cases in this station' : 'No cases match this filter'}</p>
+            <p class="text-xs text-slate-400 max-w-xs mb-3">Try clearing search terms or selecting another filter.</p>
+            <button type="button" onclick="clearCmdSearchAndFilters()" class="text-xs font-bold bg-purple-100 hover:bg-purple-200 text-cmu-purple px-4 py-2 rounded-xl transition active:scale-95 shadow-sm">Reset Search & Filters</button>
+          </div>
+        `;
         return;
       }
 
@@ -5558,7 +5797,7 @@
           <div class="text-xs font-bold text-cmu-purple uppercase tracking-wider">Patient Information</div>
           <div class="text-sm font-bold text-slate-800">${c.Patient_Name || 'Unknown'} (${c.Patient_Type || '-'})</div>
           <div class="text-xs text-slate-600 flex flex-wrap gap-x-4 gap-y-1 mt-1">
-            ${c.Student_ID && c.Student_ID !== '-' ? `<span><b>ID:</b> ${c.Student_ID}</span>` : ''}
+            ${c.Student_ID && c.Student_ID !== '-' ? `<span class="inline-flex items-center gap-1"><b>ID:</b> ${c.Student_ID} <button type="button" onclick="copyToClipboard('${c.Student_ID}', 'Copied Student ID!')" class="text-slate-400 hover:text-cmu-purple p-0.5 rounded transition touch-spring" title="Copy Student ID"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg></button></span>` : ''}
             ${c.Faculty && c.Faculty !== '-' ? `<span><b>Faculty:</b> ${c.Faculty}</span>` : ''}
             ${c.Year_Level && c.Year_Level !== '-' ? `<span><b>Year:</b> ${c.Year_Level}</span>` : ''}
             ${c.Age && c.Age !== '-' ? `<span><b>Age:</b> ${c.Age} ปี</span>` : ''}
@@ -5569,7 +5808,8 @@
           ${c.Emergency_Contact ? `
             <div class="text-xs flex items-center gap-2 mt-1">
               <span><b>Emergency Tel:</b> ${c.Emergency_Contact}</span>
-              <a href="tel:${c.Emergency_Contact}" class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded font-bold hover:bg-emerald-700">Call</a>
+              <a href="tel:${c.Emergency_Contact}" class="bg-emerald-600 text-white text-[10px] px-2.5 py-0.5 rounded-lg font-bold hover:bg-emerald-700 shadow-sm transition active:scale-95">Call</a>
+              <button type="button" onclick="copyToClipboard('${c.Emergency_Contact}', 'Copied Emergency Phone!')" class="text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 text-[10px] px-2 py-0.5 rounded-lg font-semibold transition active:scale-95" title="Copy Tel">Copy</button>
             </div>
           ` : ''}
         </div>
@@ -5663,15 +5903,35 @@
       return { label: 'Return', badgeClass: 'bg-emerald-100 text-emerald-800' };
     }
 
-    function showToast(msg) {
+    function showToast(msg, type = 'success') {
       const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
       if (!toast) return;
-      toast.textContent = msg;
-      toast.classList.remove('opacity-0', 'pointer-events-none');
-      toast.classList.add('opacity-100');
-      setTimeout(() => {
-        toast.classList.remove('opacity-100');
-        toast.classList.add('opacity-0', 'pointer-events-none');
+
+      if (toastMsg) toastMsg.textContent = msg;
+      else toast.textContent = msg;
+
+      if (toastIcon) {
+        if (type === 'error' || (typeof msg === 'string' && msg.toLowerCase().includes('error'))) {
+          toastIcon.className = 'w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0';
+          toastIcon.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>`;
+        } else if (type === 'info' || (typeof msg === 'string' && msg.toLowerCase().includes('offline'))) {
+          toastIcon.className = 'w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0';
+          toastIcon.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+        } else {
+          toastIcon.className = 'w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0';
+          toastIcon.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`;
+        }
+      }
+
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
       }, 3000);
     }
 
@@ -6947,8 +7207,8 @@
     // =========================================================================
     // GITHUB PAGES <-> GOOGLE APPS SCRIPT API BRIDGE & QR CODE SCANNER
     // =========================================================================
-    // ใส่ URL ของ Google Apps Script Web App (/exec) ที่นี่เมื่อนำขึ้น GitHub Pages
-    const GAS_WEB_APP_URL = localStorage.getItem('cmu_gas_api_url') || '';
+    // URL ของ Google Apps Script Web App (/exec)
+    const GAS_WEB_APP_URL = localStorage.getItem('cmu_gas_api_url') || 'https://script.google.com/macros/s/AKfycbwy5jbzUExe6uZ73HFp9GGhgAAvuXzEOqxKp5aDPl-M1fqjJLYg_IpMGvlfpUR_K3ns_w/exec';
 
     // Universal Bridge: If running on GitHub Pages (outside GAS iframe) and GAS_WEB_APP_URL is configured
     if ((typeof google === 'undefined' || !google.script || !google.script.run) && GAS_WEB_APP_URL) {
@@ -6956,6 +7216,8 @@
         const callApi = (action, payload) => {
           fetch(GAS_WEB_APP_URL, {
             method: 'POST',
+            redirect: 'follow',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action, payload })
           })
             .then(r => r.json())
