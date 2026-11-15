@@ -363,17 +363,24 @@
               <div class="text-[11px] font-bold text-cmu-purple uppercase tracking-wider mb-1 font-thai">บุคลากรทางการแพทย์ (Medical Staff)</div>
               <div id="stStaffDesc" class="text-slate-700 font-medium leading-relaxed font-thai">แพทย์ 1 คน, นศพ. 2 คน</div>
             </div>
-            <!-- Vehicle / Ambulance (With Inspection Button) -->
+            <!-- Vehicle / Ambulance (With Inspection Buttons for Car 1 & Car 2) -->
             <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col justify-between">
               <div>
-                <div class="mb-1">
+                <div class="mb-1 flex items-center justify-between">
                   <div class="text-[11px] font-bold text-slate-600 uppercase tracking-wider font-thai">Ambulance</div>
+                  <div id="badgeStationAmbulanceStatus" class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">Pending</div>
                 </div>
                 <div id="stVehicleDesc" class="text-slate-700 font-medium leading-relaxed font-thai">หน่วยยานพาหนะคณะแพทยศาสตร์ 1 คัน</div>
+                <div id="stVehicleMultiCarStatus" class="mt-1.5 space-y-1 text-xs"></div>
               </div>
-              <button type="button" onclick="openAmbulanceChecklistModal()" class="mt-2.5 w-full touch-btn py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition">
-                <span>Ambulance Check</span>
-              </button>
+              <div id="stAmbulanceActionBtns" class="mt-2.5 flex items-center gap-2">
+                <button type="button" onclick="openAmbulanceChecklistModal(null, 1)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition">
+                  <span id="lblCheckCar1">Check คันที่ 1</span>
+                </button>
+                <button type="button" onclick="openAmbulanceChecklistModal(null, 2)" id="btnStationCheckCar2" class="touch-btn py-2 px-2.5 rounded-xl border border-emerald-600 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-800 font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition" title="ประเมินรถพยาบาลคันที่ 2 ประจำฐาน">
+                  <span>+ คันที่ 2</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1782,7 +1789,7 @@
     // ==========================================
     // FACULTY SEARCHABLE DROPDOWN
     // ==========================================
-    const FACULTY_LIST = ["คณะวิศวกรรมศาสตร์","คณะเกษตรศาสตร์","คณะรัฐศาสตร์และรัฐประศาสนศาสตร์","คณะแพทยศาสตร์","คณะอุตสาหกรรมเกษตร","คณะเศรษฐศาสตร์","คณะสังคมศาสตร์","คณะเทคนิคการแพทย์","คณะสัตวแพทยศาสตร์","คณะทันตแพทยศาสตร์","คณะบริหารธุรกิจ","วิทยาลัยศิลปะ สื่อ และเทคโนโลยี","คณะเภสัชศาสตร์","คณะการสื่อสารมวลชน","คณะศึกษาศาสตร์","คณะพยาบาลศาสตร์","คณะนิติศาสตร์","คณะมนุษยศาสตร์","วิทยาลัยนานาชาตินวัตกรรมดิจิทัล","คณะวิทยาศาสตร์","คณะสถาปัตยกรรมศาสตร์","คณะวิจิตรศิลป์"];
+    const FACULTY_LIST = ["คณะวิศวกรรมศาสตร์","คณะเกษตรศาสตร์","คณะรัฐศาสตร์และรัฐประศาสนศาสตร์","คณะแพทยศาสตร์","คณะอุตสาหกรรมเกษตร","คณะเศรษฐศาสตร์","คณะสังคมศาสตร์","คณะเทคนิคการแพทย์","คณะสัตวแพทยศาสตร์","คณะทันตแพทยศาสตร์","คณะบริหารธุรกิจ","วิทยาลัยศิลปะ สื่อ และเทคโนโลยี","คณะเภสัชศาสตร์","คณะการสื่อสารมวลชน","คณะศึกษาศาสตร์","คณะพยาบาลศาสตร์","คณะนิติศาสตร์","คณะมนุษยศาสตร์","วิทยาลัยนานาชาตินวัตกรรมดิจิทัล","คณะวิทยาศาสตร์","คณะสถาปัตยกรรมศาสตร์","คณะวิจิตรศิลป์","คณะสาธารณสุขศาสตร์"];
 
     function renderFacultyOptions(filterText = '') {
       const listEl = document.getElementById('facultyDropdownList');
@@ -6184,9 +6191,29 @@
           </label>
           <input type="text" id="ambInspectorInput" placeholder="" class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-semibold shadow-sm">
         </div>
+
+        <!-- Vehicle Unit Toggle (Car 1 vs Car 2) -->
+        <div class="sm:col-span-2 bg-purple-50/70 p-2.5 rounded-xl border border-purple-200/80 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-purple-900">คันที่ประเมิน:</span>
+            <div class="inline-flex rounded-lg bg-white p-0.5 border border-purple-200 shadow-xs" id="ambCarToggleGroup">
+              <button type="button" onclick="switchAmbulanceCarIndex(1)" id="btnAmbCar1" class="px-3.5 py-1.5 rounded-md text-xs font-bold transition bg-purple-700 text-white shadow-xs">
+                คันที่ 1
+              </button>
+              <button type="button" onclick="switchAmbulanceCarIndex(2)" id="btnAmbCar2" class="px-3.5 py-1.5 rounded-md text-xs font-semibold transition text-purple-800 hover:bg-purple-100">
+                คันที่ 2
+              </button>
+            </div>
+          </div>
+          <div id="ambCarStatusBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">
+            คันที่ 1: รอการประเมิน
+          </div>
+        </div>
+
+        <!-- Ambulance Vehicle Editable Input (No description, fully editable) -->
         <div class="sm:col-span-2">
           <label class="block font-bold text-slate-700 mb-1">Ambulance Vehicle</label>
-          <input type="text" id="ambVehicleInput" readonly class="w-full text-xs rounded-xl border border-slate-200 px-3 py-2 bg-slate-100 text-slate-600 font-medium">
+          <input type="text" id="ambVehicleInput" placeholder="" class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2.5 bg-white text-slate-800 font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm">
         </div>
       </div>
 
@@ -6519,16 +6546,22 @@
     });
   }
 
-  function openAmbulanceChecklistModal(targetStationId) {
-    initAmbulanceBaselineData();
+  // Current Active Evaluation Variables
+  let currentAmbStationId = 'st1';
+  let currentAmbCarIndex = 1; // 1 or 2
+  let ambItemState = {};
+  let currentAmbFilter = 'ALL';
+
+  function openAmbulanceChecklistModal(targetStationId, carIndex) {
     const stId = targetStationId || (typeof APP_STATE !== 'undefined' && APP_STATE.currentStation && APP_STATE.currentStation !== 'ALL' && APP_STATE.currentStation !== 'AMBULANCE_STATUS' ? APP_STATE.currentStation : 'st1');
     currentAmbStationId = stId;
+    currentAmbCarIndex = (carIndex === 2) ? 2 : 1;
 
     const selectEl = document.getElementById('ambStationSelect');
     if (selectEl) selectEl.value = stId;
-    updateAmbCustomStationDropdownUI(stId);
 
-    loadStationAmbulanceData(stId);
+    updateAmbCustomStationDropdownUI(stId);
+    loadStationAmbulanceData(stId, currentAmbCarIndex);
 
     const modal = document.getElementById('ambulanceChecklistModal');
     if (modal) {
@@ -6543,6 +6576,55 @@
     closeAmbModalStationDropdown();
   }
 
+  function switchAmbulanceCarIndex(carIdx) {
+    if (carIdx === currentAmbCarIndex) return;
+    currentAmbCarIndex = (carIdx === 2) ? 2 : 1;
+    loadStationAmbulanceData(currentAmbStationId, currentAmbCarIndex);
+  }
+
+  function updateAmbCarToggleUI(carIdx) {
+    const btn1 = document.getElementById('btnAmbCar1');
+    const btn2 = document.getElementById('btnAmbCar2');
+    if (!btn1 || !btn2) return;
+
+    if (carIdx === 1) {
+      btn1.className = 'px-3.5 py-1.5 rounded-md text-xs font-bold transition bg-purple-700 text-white shadow-xs';
+      btn2.className = 'px-3.5 py-1.5 rounded-md text-xs font-semibold transition text-purple-800 hover:bg-purple-100';
+    } else {
+      btn2.className = 'px-3.5 py-1.5 rounded-md text-xs font-bold transition bg-purple-700 text-white shadow-xs';
+      btn1.className = 'px-3.5 py-1.5 rounded-md text-xs font-semibold transition text-purple-800 hover:bg-purple-100';
+    }
+  }
+
+  function updateAmbCarStatusBadge(stationId, carIdx) {
+    const badge = document.getElementById('ambCarStatusBadge');
+    if (!badge) return;
+
+    const rawSpecific = localStorage.getItem(`amb_checklist_${stationId}_car${carIdx}`);
+    const rawLegacy = (carIdx === 1) ? localStorage.getItem(`amb_checklist_${stationId}`) : null;
+    const raw = rawSpecific || rawLegacy;
+
+    if (!raw) {
+      badge.textContent = `คันที่ ${carIdx}: รอการประเมิน`;
+      badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500';
+    } else {
+      try {
+        const d = JSON.parse(raw);
+        const isReady = (d.overallStatus === 'Ready' || d.overallStatus === 'พร้อมใช้งาน');
+        if (isReady) {
+          badge.textContent = `คันที่ ${carIdx}: พร้อมใช้งาน (Ready)`;
+          badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300';
+        } else {
+          badge.textContent = `คันที่ ${carIdx}: ต้องติดตาม (Needs Attention)`;
+          badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300';
+        }
+      } catch(e) {
+        badge.textContent = `คันที่ ${carIdx}: รอการประเมิน`;
+        badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500';
+      }
+    }
+  }
+
   function toggleAmbModalStationDropdown() {
     const menu = document.getElementById('ambCustomStationMenu');
     const chevron = document.getElementById('ambCustomStationChevron');
@@ -6551,7 +6633,8 @@
     if (isClosed) {
       renderAmbModalStationOptions();
       menu.classList.remove('hidden');
-      if (chevron) chevron.classList.add('rotate-180');
+      if (chevron) chevron.classList.remove('rotate-180');
+      else chevron.classList.add('rotate-180');
     } else {
       closeAmbModalStationDropdown();
     }
@@ -6591,7 +6674,7 @@
     if (selectEl) selectEl.value = stId;
     updateAmbCustomStationDropdownUI(stId);
     closeAmbModalStationDropdown();
-    loadStationAmbulanceData(stId);
+    loadStationAmbulanceData(stId, currentAmbCarIndex);
   }
 
   function updateAmbCustomStationDropdownUI(stId) {
@@ -6603,25 +6686,45 @@
     if (subTitle) subTitle.textContent = name;
   }
 
-  function loadStationAmbulanceData(stationId) {
+  function loadStationAmbulanceData(stationId, carIndex = currentAmbCarIndex || 1) {
+    currentAmbCarIndex = (carIndex === 2) ? 2 : 1;
+    updateAmbCarToggleUI(currentAmbCarIndex);
+
     const stationInfo = (typeof STATIONS_INFO !== 'undefined') ? STATIONS_INFO[stationId] : null;
     const vehInput = document.getElementById('ambVehicleInput');
     const inspInput = document.getElementById('ambInspectorInput');
+    const unreadyNotesInput = document.getElementById('ambUnreadyNotesInput');
 
-    if (vehInput) {
-      vehInput.value = (stationInfo && stationInfo.vehicleDesc) ? stationInfo.vehicleDesc : 'หน่วยกู้ชีพ/รถพยาบาลประจำจุด';
-    }
-
-    const savedRaw = localStorage.getItem('amb_checklist_' + stationId);
+    const rawSpecific = localStorage.getItem(`amb_checklist_${stationId}_car${currentAmbCarIndex}`);
+    const rawLegacy = (currentAmbCarIndex === 1) ? localStorage.getItem(`amb_checklist_${stationId}`) : null;
     let saved = null;
+    const savedRaw = rawSpecific || rawLegacy;
     if (savedRaw) {
       try { saved = JSON.parse(savedRaw); } catch(e) {}
+    }
+
+    if (vehInput) {
+      if (saved && saved.vehicleDesc) {
+        vehInput.value = saved.vehicleDesc;
+      } else {
+        let defaultDesc = (stationInfo && stationInfo.vehicleDesc) ? stationInfo.vehicleDesc : 'หน่วยกู้ชีพ/รถพยาบาลประจำจุด';
+        if (defaultDesc.includes('2 คัน')) {
+          defaultDesc = defaultDesc.replace('2 คัน', `คันที่ ${currentAmbCarIndex}`);
+        } else if (!defaultDesc.includes('คันที่')) {
+          defaultDesc = `${defaultDesc} (คันที่ ${currentAmbCarIndex})`;
+        }
+        vehInput.value = defaultDesc;
+      }
     }
 
     if (saved && saved.inspectorName && inspInput) {
       inspInput.value = saved.inspectorName;
     } else if (inspInput) {
       inspInput.value = (typeof APP_STATE !== 'undefined' && APP_STATE.staffName) ? APP_STATE.staffName : '';
+    }
+
+    if (unreadyNotesInput) {
+      unreadyNotesInput.value = (saved && saved.unreadyNotes) ? saved.unreadyNotes : '';
     }
 
     const currentCatalog = getAmbulanceCatalogForStation(stationId);
@@ -6632,7 +6735,7 @@
       } else {
         ambItemState[item.id] = {
           actualQty: item.defaultQty,
-          status: '', // Unchecked by default: User must manually check each item
+          status: '', // Unchecked by default per user request
           notes: ''
         };
       }
@@ -6640,6 +6743,7 @@
 
     renderAmbulanceChecklistTable();
     updateAmbulanceLiveSummary();
+    updateAmbCarStatusBadge(stationId, currentAmbCarIndex);
   }
 
   function renderAmbulanceChecklistTable() {
@@ -6653,7 +6757,7 @@
     let html = `
       <div class="mb-2 px-1 flex items-center justify-between">
         <span class="text-xs font-bold ${isSt9 ? 'text-purple-700' : 'text-slate-700'}">${countLabel}</span>
-        ${isSt9 ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">ฐาน 9 Special: LUCAS CPR</span>' : ''}
+        ${isSt9 ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">ฐาน 9: LUCAS CPR</span>' : ''}
       </div>
       <div class="w-full rounded-xl border border-slate-200 shadow-sm bg-white overflow-hidden">
         <table class="w-full table-fixed text-left border-collapse">
@@ -6728,12 +6832,21 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Unready Equipment Custom Report Box (รายงานอุปกรณ์ที่ไม่พร้อมใช้งาน ให้เพิ่มเอง - No description in box) -->
+      <div class="mt-4 p-3.5 bg-amber-50/70 rounded-xl border border-amber-200/90 space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span>รายงานอุปกรณ์ที่ไม่พร้อมใช้งาน</span>
+          </label>
+        </div>
+        <textarea id="ambUnreadyNotesInput" rows="2" placeholder="" class="w-full text-xs rounded-xl border border-amber-300 p-2.5 bg-white text-slate-800 focus:ring-2 focus:ring-amber-500 focus:outline-none font-medium shadow-xs"></textarea>
+      </div>
     `;
 
     container.innerHTML = html;
   }
-
-  
 
   function setAmbulanceItemStatus(itemId, status) {
     if (!ambItemState[itemId]) {
@@ -6752,9 +6865,9 @@
 
     currentCatalog.forEach(i => {
       const s = ambItemState[i.id];
-      if (!s || s.status === 'ready') ready++;
-      else if (s.status === 'not_ready') notReady++;
-      else if (s.status === 'no_equipment') noEquip++;
+      if (s && s.status === 'ready') ready++;
+      else if (s && s.status === 'not_ready') notReady++;
+      else if (s && s.status === 'no_equipment') noEquip++;
     });
 
     const elReady = document.getElementById('ambSummaryReadyText');
@@ -6770,9 +6883,10 @@
     const stationId = currentAmbStationId || (document.getElementById('ambStationSelect') ? document.getElementById('ambStationSelect').value : 'st1');
     const inspector = (document.getElementById('ambInspectorInput') ? document.getElementById('ambInspectorInput').value.trim() : '');
     const vehicleDesc = (document.getElementById('ambVehicleInput') ? document.getElementById('ambVehicleInput').value.trim() : '');
+    const unreadyNotes = (document.getElementById('ambUnreadyNotesInput') ? document.getElementById('ambUnreadyNotesInput').value.trim() : '');
 
     if (!inspector) {
-      showToast('Please enter inspector name');
+      alert('กรุณากรอกชื่อผู้ตรวจ (Inspector)');
       const inp = document.getElementById('ambInspectorInput');
       if (inp) inp.focus();
       return;
@@ -6782,124 +6896,178 @@
     let readyCount = 0;
     let notReadyCount = 0;
     let noEquipCount = 0;
-    let defectList = [];
+    let uncheckedCount = 0;
+
+    const itemsSummary = [];
 
     currentCatalog.forEach(item => {
-      const s = ambItemState[item.id] || { actualQty: item.defaultQty, status: 'ready', notes: '' };
-      if (s.status === 'ready') {
+      const state = ambItemState[item.id] || { actualQty: item.defaultQty, status: '', notes: '' };
+      if (state.status === 'ready') {
         readyCount++;
-      } else if (s.status === 'not_ready') {
+      } else if (state.status === 'not_ready') {
         notReadyCount++;
-        defectList.push(item.name + ' (Not Ready)');
-      } else if (s.status === 'no_equipment') {
+        itemsSummary.push(`${item.name} (Not Ready)`);
+      } else if (state.status === 'no_equipment') {
         noEquipCount++;
-        defectList.push(item.name + ' (No equipment)');
+        itemsSummary.push(`${item.name} (No equipment)`);
+      } else {
+        uncheckedCount++;
       }
     });
 
-    const isAllReady = (notReadyCount === 0 && noEquipCount === 0);
-    const overallStatus = isAllReady ? 'Ready' : 'Needs Attention';
+    if (uncheckedCount > 0) {
+      const confirmSave = confirm(`ยังมีอุปกรณ์ที่ยังไม่ได้ประเมินอีก ${uncheckedCount} รายการ ยืนยันที่จะบันทึกหรือไม่?`);
+      if (!confirmSave) return;
+    }
+
+    const total = currentCatalog.length;
+    const overallStatus = (notReadyCount === 0 && noEquipCount === 0 && uncheckedCount === 0) ? 'Ready' : 'Needs Attention';
+
     const now = new Date();
-    const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ' น.';
+    const nowTimeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const nowIso = now.toISOString();
 
     const record = {
       stationId: stationId,
-      stationName: (typeof STATIONS_INFO !== 'undefined' && STATIONS_INFO[stationId]) ? STATIONS_INFO[stationId].name : stationId,
-      vehicleDesc: vehicleDesc,
+      carIndex: currentAmbCarIndex,
       inspectorName: inspector,
+      vehicleDesc: vehicleDesc,
+      unreadyNotes: unreadyNotes,
+      timestamp: nowIso,
+      evalTime: nowTimeStr,
       overallStatus: overallStatus,
-      summaryTotal: currentCatalog.length,
-      summaryReady: readyCount,
-      summaryNotReady: notReadyCount,
-      summaryNoEquipment: noEquipCount,
-      defectsSummary: isAllReady ? `All ${currentCatalog.length} items ready (100%)` : defectList.slice(0, 3).join(', ') + (defectList.length > 3 ? ' +' + (defectList.length - 3) + ' more' : ''),
-      completedAt: timeStr,
-      timestamp: now.toISOString(),
+      readyCount: readyCount,
+      notReadyCount: notReadyCount,
+      noEquipCount: noEquipCount,
+      totalItems: total,
+      issues: itemsSummary,
       items: ambItemState
     };
 
-    localStorage.setItem('amb_checklist_' + stationId, JSON.stringify(record));
-
-    // Send to Google Sheets if running in GAS
-    if (typeof google !== 'undefined' && google.script && google.script.run) {
-      showToast('กำลังบันทึกลง Google Sheet (Ambulance_Checklist)...');
-      google.script.run
-        .withSuccessHandler(res => {
-          if (res && res.success) {
-            showToast('บันทึกลงชีต Ambulance_Checklist สำเร็จ!');
-          } else {
-            showToast('เกิดข้อผิดพลาด: ' + (res ? res.error : 'Unknown'));
-          }
-        })
-        .withFailureHandler(err => {
-          console.error('GAS save error:', err);
-          showToast('ไม่สามารถบันทึกลง Sheet: ' + (err.message || err));
-        })
-        .saveAmbulanceChecklist(record);
+    // Save under specific car key
+    localStorage.setItem(`amb_checklist_${stationId}_car${currentAmbCarIndex}`, JSON.stringify(record));
+    if (currentAmbCarIndex === 1) {
+      localStorage.setItem(`amb_checklist_${stationId}`, JSON.stringify(record));
     }
 
-    showToast('Saved successfully');
-    closeAmbulanceChecklistModal();
+    // Attempt backend sync
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(res => {
+          console.log('Ambulance evaluation saved to Sheet:', res);
+        })
+        .withFailureHandler(err => {
+          console.warn('Backend sync failed, stored locally:', err);
+        })
+        .saveAmbulanceChecklist({
+          stationId: stationId,
+          vehicleNo: currentAmbCarIndex,
+          inspector: inspector,
+          vehicleDesc: vehicleDesc,
+          unreadyNotes: unreadyNotes,
+          overallStatus: overallStatus,
+          readyCount: readyCount,
+          notReadyCount: notReadyCount,
+          noEquipCount: noEquipCount,
+          issues: itemsSummary.join('; '),
+          itemsJson: JSON.stringify(ambItemState)
+        });
+    }
+
+    showToast(`บันทึกผลการตรวจรถพยาบาลคันที่ ${currentAmbCarIndex} เรียบร้อยแล้ว`);
     updateStationAmbulanceBadge(stationId);
+    updateAmbCarStatusBadge(stationId, currentAmbCarIndex);
 
     if (typeof APP_STATE !== 'undefined' && APP_STATE.currentStation === 'AMBULANCE_STATUS') {
       renderAmbulanceStatusDashboard();
     }
-  }
 
-  window.submitAmbulanceChecklist = saveAmbulanceChecklist;
+    closeAmbulanceChecklistModal();
+  }
 
   function updateStationAmbulanceBadge(stationId) {
-    const raw = localStorage.getItem('amb_checklist_' + stationId);
-    let isReady = false;
-    let hasData = false;
-    if (raw) {
-      try {
-        const d = JSON.parse(raw);
-        hasData = true;
-        isReady = (d.overallStatus === 'Ready' || d.overallStatus === 'พร้อมใช้งาน');
-      } catch(e) {}
+    const badge = document.getElementById('badgeStationAmbulanceStatus');
+    const multiContainer = document.getElementById('stVehicleMultiCarStatus');
+    const actionBtns = document.getElementById('stAmbulanceActionBtns');
+    const lblCar1 = document.getElementById('lblCheckCar1');
+    const btnCar2 = document.getElementById('btnStationCheckCar2');
+
+    const raw1 = localStorage.getItem(`amb_checklist_${stationId}_car1`) || localStorage.getItem(`amb_checklist_${stationId}`);
+    const raw2 = localStorage.getItem(`amb_checklist_${stationId}_car2`);
+
+    const stationInfo = (typeof STATIONS_INFO !== 'undefined') ? STATIONS_INFO[stationId] : null;
+    const hasTwo = (stationInfo && stationInfo.vehicleDesc && stationInfo.vehicleDesc.includes('2 คัน')) || !!raw2;
+
+    if (btnCar2) {
+      if (hasTwo) {
+        btnCar2.classList.remove('hidden');
+        if (lblCar1) lblCar1.textContent = 'คันที่ 1';
+      } else {
+        btnCar2.classList.add('hidden');
+        if (lblCar1) lblCar1.textContent = 'Ambulance Check';
+      }
     }
 
-    const badge = document.getElementById('badgeStationAmbulanceStatus');
+    let d1 = null, d2 = null;
+    if (raw1) { try { d1 = JSON.parse(raw1); } catch(e) {} }
+    if (raw2) { try { d2 = JSON.parse(raw2); } catch(e) {} }
+
+    if (multiContainer) {
+      if (hasTwo) {
+        multiContainer.classList.remove('hidden');
+        let html = '';
+        html += `
+          <div class="flex items-center justify-between py-0.5 px-2 rounded-lg ${d1 ? (d1.overallStatus === 'Ready' || d1.overallStatus === 'พร้อมใช้งาน' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900') : 'bg-slate-100 text-slate-500'}">
+            <span class="font-bold">คันที่ 1: ${d1 ? d1.overallStatus : 'รอตรวจ'}</span>
+            <span class="text-[10px]">${d1 ? (d1.evalTime || '') : ''}</span>
+          </div>
+          <div class="flex items-center justify-between py-0.5 px-2 rounded-lg ${d2 ? (d2.overallStatus === 'Ready' || d2.overallStatus === 'พร้อมใช้งาน' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900') : 'bg-slate-100 text-slate-500'}">
+            <span class="font-bold">คันที่ 2: ${d2 ? d2.overallStatus : 'รอตรวจ'}</span>
+            <span class="text-[10px]">${d2 ? (d2.evalTime || '') : ''}</span>
+          </div>
+        `;
+        multiContainer.innerHTML = html;
+      } else {
+        multiContainer.classList.add('hidden');
+        multiContainer.innerHTML = '';
+      }
+    }
+
     if (!badge) return;
 
-    if (!hasData) {
+    if (!d1 && !d2) {
       badge.textContent = 'Pending';
       badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500';
-    } else if (isReady) {
-      badge.textContent = 'Ready';
-      badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800';
+      return;
+    }
+
+    let isAllReady = true;
+    let hasIssues = false;
+
+    if (d1) {
+      if (d1.overallStatus !== 'Ready' && d1.overallStatus !== 'พร้อมใช้งาน') { isAllReady = false; hasIssues = true; }
     } else {
+      isAllReady = false;
+    }
+
+    if (hasTwo) {
+      if (d2) {
+        if (d2.overallStatus !== 'Ready' && d2.overallStatus !== 'พร้อมใช้งาน') { isAllReady = false; hasIssues = true; }
+      } else {
+        isAllReady = false;
+      }
+    }
+
+    if (hasIssues) {
       badge.textContent = 'Needs Attention';
-      badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800';
+      badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300';
+    } else if (isAllReady) {
+      badge.textContent = 'Ready';
+      badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300';
+    } else {
+      badge.textContent = 'Partial Ready';
+      badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 border border-purple-300';
     }
-  }
-
-  // ==============================================================
-  // COMMANDER DASHBOARD (ROBUST DATA PARSING & 2-COLUMN DISPLAY)
-  // ==============================================================
-    function formatDisplayTime(ts, completedAt) {
-    if (completedAt && /^\d{1,2}:\d{2}\s*น\./.test(String(completedAt).trim())) {
-      return String(completedAt).trim();
-    }
-    const candidate = (ts && !String(ts).includes('Nov น.')) ? ts : completedAt;
-    const str = String(candidate || '').trim();
-    if (!str || str === '-' || str === 'Nov น.') return '-';
-
-    const timeMatch = str.match(/(\d{1,2}):(\d{2})/);
-    if (timeMatch) {
-      return timeMatch[1].padStart(2, '0') + ':' + timeMatch[2] + ' น.';
-    }
-
-    const d = new Date(str);
-    if (!isNaN(d.getTime())) {
-      const h = String(d.getHours()).padStart(2, '0');
-      const m = String(d.getMinutes()).padStart(2, '0');
-      return h + ':' + m + ' น.';
-    }
-
-    return str;
   }
 
   function renderAmbulanceStatusDashboard() {
@@ -6909,9 +7077,10 @@
       ? APP_STATE.stations
       : Object.keys(STATIONS_INFO).map(k => ({ id: k, name: STATIONS_INFO[k].name }));
 
-    let readyStations = 0;
-    let issueStations = 0;
-    let pendingStations = 0;
+    let readyCount = 0;
+    let issueCount = 0;
+    let pendingCount = 0;
+    let totalAmbulancesCount = 0;
 
     const stationCardsData = [];
 
@@ -6919,254 +7088,301 @@
       try {
         const stInfo = (typeof STATIONS_INFO !== 'undefined') ? STATIONS_INFO[st.id] : null;
         const vehDesc = stInfo ? stInfo.vehicleDesc : '-';
-        const savedRaw = localStorage.getItem('amb_checklist_' + st.id);
-        let data = null;
+        const raw1 = localStorage.getItem(`amb_checklist_${st.id}_car1`) || localStorage.getItem(`amb_checklist_${st.id}`);
+        const raw2 = localStorage.getItem(`amb_checklist_${st.id}_car2`);
 
-        if (savedRaw) {
-          try { data = JSON.parse(savedRaw); } catch(e) {}
-        }
+        const hasTwo = (stInfo && stInfo.vehicleDesc && stInfo.vehicleDesc.includes('2 คัน')) || !!raw2;
 
-        let statusCategory = 'PENDING';
-        let statusBadgeHtml = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Pending</span>';
-        let inspectorName = '-';
-        let completedTime = '-';
-        let summaryText = 'Pending pre-duty inspection';
+        let d1 = null, d2 = null;
+        if (raw1) { try { d1 = JSON.parse(raw1); } catch(e) {} }
+        if (raw2) { try { d2 = JSON.parse(raw2); } catch(e) {} }
 
-        if (data) {
-          inspectorName = data.inspectorName || '-';
-
-          completedTime = formatDisplayTime(data.timestamp, data.completedAt);
-
-          if (data.overallStatus === 'Ready' || data.overallStatus === 'พร้อมใช้งาน') {
-            statusCategory = 'READY';
-            readyStations++;
-            statusBadgeHtml = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Ready</span>';
-            summaryText = `All ${data.summaryReady || 71} items ready (100%)`;
+        // Process Car 1
+        totalAmbulancesCount++;
+        let c1Status = 'PENDING';
+        if (d1) {
+          if (d1.overallStatus === 'Ready' || d1.overallStatus === 'พร้อมใช้งาน') {
+            c1Status = 'READY';
+            readyCount++;
           } else {
-            statusCategory = 'ISSUES';
-            issueStations++;
-            statusBadgeHtml = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Needs Attention</span>';
-            summaryText = data.defectsSummary || 'Items needing attention';
+            c1Status = 'ISSUES';
+            issueCount++;
           }
         } else {
-          pendingStations++;
+          pendingCount++;
+        }
+
+        // Process Car 2 (if station has 2 cars)
+        let c2Status = 'PENDING';
+        if (hasTwo) {
+          totalAmbulancesCount++;
+          if (d2) {
+            if (d2.overallStatus === 'Ready' || d2.overallStatus === 'พร้อมใช้งาน') {
+              c2Status = 'READY';
+              readyCount++;
+            } else {
+              c2Status = 'ISSUES';
+              issueCount++;
+            }
+          } else {
+            pendingCount++;
+          }
+        }
+
+        // Overall Station category for filter
+        let stationCategory = 'PENDING';
+        if (hasTwo) {
+          if (c1Status === 'ISSUES' || c2Status === 'ISSUES') stationCategory = 'ISSUES';
+          else if (c1Status === 'READY' && c2Status === 'READY') stationCategory = 'READY';
+          else if (c1Status === 'READY' || c2Status === 'READY') stationCategory = 'READY';
+          else stationCategory = 'PENDING';
+        } else {
+          stationCategory = c1Status;
         }
 
         stationCardsData.push({
-          id: st.id,
-          name: stInfo ? stInfo.name : (st.name || st.code),
-          vehicleDesc: vehDesc,
-          category: statusCategory,
-          statusBadgeHtml: statusBadgeHtml,
-          inspectorName: inspectorName,
-          completedTime: completedTime,
-          summaryText: summaryText
+          station: st,
+          stationInfo: stInfo,
+          vehDesc: vehDesc,
+          hasTwo: hasTwo,
+          d1: d1,
+          d2: d2,
+          c1Status: c1Status,
+          c2Status: c2Status,
+          category: stationCategory
         });
-      } catch(err) {
-        console.warn('Error processing station ' + st.id + ':', err);
+      } catch (err) {
+        console.error('Error parsing station ambulance data:', st.id, err);
       }
     });
 
-    // Update KPI numbers
-    const totalEl = document.getElementById('kpiAmbTotalStations');
-    const readyEl = document.getElementById('kpiAmbReadyStations');
-    const issueEl = document.getElementById('kpiAmbIssueStations');
-    const pendingEl = document.getElementById('kpiAmbPendingStations');
+    const elTotal = document.getElementById('ambKpiTotalStations');
+    const elReady = document.getElementById('ambKpiReadyStations');
+    const elIssues = document.getElementById('ambKpiIssueStations');
+    const elPending = document.getElementById('ambKpiPendingStations');
 
-    const cntTotal = document.getElementById('cntAmbTotal');
-    const cntReady = document.getElementById('cntAmbReady');
-    const cntIssues = document.getElementById('cntAmbIssues');
-    const cntPending = document.getElementById('cntAmbPending');
+    if (elTotal) elTotal.textContent = totalAmbulancesCount;
+    if (elReady) elReady.textContent = readyCount;
+    if (elIssues) elIssues.textContent = issueCount;
+    if (elPending) elPending.textContent = pendingCount;
 
-    if (totalEl) totalEl.textContent = stations.length;
-    if (readyEl) readyEl.textContent = readyStations;
-    if (issueEl) issueEl.textContent = issueStations;
-    if (pendingEl) pendingEl.textContent = pendingStations;
+    const listContainer = document.getElementById('stationAmbulanceStatusList');
+    if (!listContainer) return;
 
-    if (cntTotal) cntTotal.textContent = stations.length;
-    if (cntReady) cntReady.textContent = readyStations;
-    if (cntIssues) cntIssues.textContent = issueStations;
-    if (cntPending) cntPending.textContent = pendingStations;
-
-    // Render cards list
-    renderAmbulanceStatusCards(stationCardsData);
-  }
-
-  function filterAmbulanceStatusView(filter) {
-    currentAmbFilter = filter;
-
-    ['ALL', 'READY', 'ISSUES', 'PENDING'].forEach(f => {
-      const btn = document.getElementById('fltAmb-' + f);
-      if (!btn) return;
-      if (f === filter) {
-        btn.className = 'px-3.5 py-1.5 rounded-lg bg-white text-slate-800 shadow-sm transition font-bold';
-      } else {
-        btn.className = 'px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition font-medium';
-      }
-    });
-
-    renderAmbulanceStatusDashboard();
-  }
-
-  function renderAmbulanceStatusCards(stationCardsData) {
-    const container = document.getElementById('ambStatusCardsContainer');
-    if (!container) return;
-
-    const filtered = stationCardsData.filter(item => {
-      if (currentAmbFilter === 'ALL') return true;
-      return item.category === currentAmbFilter;
-    });
+    let filtered = stationCardsData;
+    if (currentAmbFilter === 'READY') {
+      filtered = stationCardsData.filter(x => x.c1Status === 'READY' || x.c2Status === 'READY');
+    } else if (currentAmbFilter === 'ISSUES') {
+      filtered = stationCardsData.filter(x => x.c1Status === 'ISSUES' || x.c2Status === 'ISSUES');
+    } else if (currentAmbFilter === 'PENDING') {
+      filtered = stationCardsData.filter(x => x.c1Status === 'PENDING' || (x.hasTwo && x.c2Status === 'PENDING'));
+    }
 
     if (filtered.length === 0) {
-      container.innerHTML = `
-        <div class="p-8 text-center text-slate-400 text-sm">
-          No stations match this filter.
+      listContainer.innerHTML = `
+        <div class="col-span-full py-12 text-center text-slate-400">
+          <p class="text-sm font-semibold">No ambulance records found for this filter.</p>
         </div>
       `;
       return;
     }
 
     let cardsHtml = '';
-    filtered.forEach(st => {
-      cardsHtml += `
-        <div class="p-4 sm:p-5 hover:bg-slate-50/80 transition flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <!-- Left Column: Details -->
-          <div class="flex-1 min-w-0 space-y-1">
-            <h4 class="font-bold text-sm sm:text-base text-slate-900">${st.name}</h4>
-            <div class="text-xs text-slate-500 font-medium">
-              Vehicle: <span class="text-slate-700 font-semibold">${st.vehicleDesc}</span>
+    filtered.forEach(item => {
+      const st = item.station;
+      const stName = item.stationInfo ? item.stationInfo.name : st.name;
+
+      function renderCarSubCard(carIdx, data, status) {
+        const isReady = (status === 'READY');
+        const isIssues = (status === 'ISSUES');
+        const isPending = (status === 'PENDING');
+
+        const badgeHtml = isReady
+          ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Ready to use</span>'
+          : (isIssues
+            ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Needs Attention</span>'
+            : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Pending Inspection</span>');
+
+        const carVehName = data && data.vehicleDesc ? data.vehicleDesc : item.vehDesc;
+        const inspector = data && data.inspectorName ? data.inspectorName : '-';
+        const time = data && data.evalTime ? data.evalTime : '-';
+        const unreadyNotes = data && data.unreadyNotes ? data.unreadyNotes : '';
+
+        let defectHtml = '';
+        if (data && data.issues && data.issues.length > 0) {
+          defectHtml = `
+            <div class="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-900">
+              <span class="font-bold">อุปกรณ์ที่ต้องติดตาม (${data.issues.length} รายการ):</span>
+              <ul class="list-disc list-inside mt-0.5 text-slate-700 space-y-0.5">
+                ${data.issues.slice(0, 3).map(iss => `<li>${iss}</li>`).join('')}
+                ${data.issues.length > 3 ? `<li class="font-semibold text-amber-800">...และอีก ${data.issues.length - 3} รายการ</li>` : ''}
+              </ul>
             </div>
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-              <div>Inspector: <span class="font-semibold text-slate-800">${st.inspectorName}</span></div>
-              <div>Time: <span class="font-semibold text-slate-800">${st.completedTime}</span></div>
+          `;
+        }
+
+        let unreadyNotesHtml = '';
+        if (unreadyNotes) {
+          unreadyNotesHtml = `
+            <div class="mt-2 p-2 bg-rose-50 rounded-lg border border-rose-200 text-[11px] text-rose-900">
+              <span class="font-bold">รายงานอุปกรณ์ไม่พร้อมใช้งานเพิ่มเติม:</span>
+              <p class="text-slate-800 mt-0.5">${unreadyNotes}</p>
             </div>
-            <div class="mt-1 text-xs ${st.category === 'ISSUES' ? 'text-amber-800 bg-amber-50/80 p-2 rounded-lg border border-amber-200' : 'text-slate-600'}">
-              ${st.summaryText}
+          `;
+        }
+
+        return `
+          <div class="p-3 rounded-xl border border-slate-200/90 bg-white/80 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-900">คันที่ ${carIdx}</span>
+                <span class="text-xs font-bold text-slate-800 truncate">${carVehName}</span>
+              </div>
+              <div>${badgeHtml}</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600 pt-1 border-t border-slate-100">
+              <div><span class="text-slate-400">Inspector:</span> <strong class="text-slate-700">${inspector}</strong></div>
+              <div><span class="text-slate-400">Time:</span> <strong class="text-slate-700">${time}</strong></div>
+            </div>
+
+            ${defectHtml}
+            ${unreadyNotesHtml}
+
+            <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+              <button type="button" onclick="openAmbulanceChecklistModal('${st.id}', ${carIdx})" class="touch-btn px-3 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs transition">
+                Checklist
+              </button>
+              ${data ? `
+                <button type="button" onclick="generateAmbulancePDFReport('${st.id}', ${carIdx})" class="touch-btn px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+                  PDF
+                </button>
+              ` : ''}
             </div>
           </div>
+        `;
+      }
 
-          <!-- Right Column: Dedicated Status Badge & Action Button -->
-          <div class="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-2.5 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-            <div class="shrink-0">
-              ${st.statusBadgeHtml}
+      cardsHtml += `
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3.5 hover:shadow-md transition">
+          <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-black text-xs">
+                ${st.id.replace('st', '')}
+              </div>
+              <h3 class="font-bold text-slate-800 text-sm sm:text-base font-thai">${stName}</h3>
             </div>
-            <button type="button" onclick="openAmbulanceChecklistModal('${st.id}')" class="touch-btn px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 active:scale-95 text-white text-xs font-bold transition shadow-sm flex items-center">
-              <span>Checklist</span>
-            </button>
+            ${item.hasTwo ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">2 Units</span>' : ''}
+          </div>
+
+          <div class="space-y-3">
+            ${renderCarSubCard(1, item.d1, item.c1Status)}
+            ${item.hasTwo ? renderCarSubCard(2, item.d2, item.c2Status) : ''}
           </div>
         </div>
       `;
     });
 
-    container.innerHTML = cardsHtml;
+    listContainer.innerHTML = cardsHtml;
   }
 
-  // ==============================================================
-  // BLACK & WHITE OFFICIAL TABLE PDF BUILDER (IMAGES 3, 4, 5)
-  // WITH PAGE-BREAK AVOIDANCE PREVENTING SPLIT ROWS (IMAGE 1)
-  // ==============================================================
-  function buildAmbulanceReportHtml(specificStationId) {
-    const currentStKey = specificStationId || (document.getElementById('ambStationSelect') ? document.getElementById('ambStationSelect').value : 'st1');
-    let stationInfo = (typeof STATIONS_INFO !== 'undefined') ? STATIONS_INFO[currentStKey] : null;
-    const stName = stationInfo ? stationInfo.name : 'Station 1';
-    const vehDesc = (stationInfo ? stationInfo.vehicleDesc : (document.getElementById('ambVehicleInput') ? document.getElementById('ambVehicleInput').value : '')) || '-';
-    
-    let inspector = (document.getElementById('ambInspectorInput') ? document.getElementById('ambInspectorInput').value.trim() : '') || '-';
-    let saved = null;
-    try {
-      const raw = localStorage.getItem('amb_checklist_' + currentStKey);
-      if (raw) saved = JSON.parse(raw);
-    } catch(e) {}
+  function filterAmbulanceDashboard(filter) {
+    currentAmbFilter = filter;
+    const btnAll = document.getElementById('filterAmbAll');
+    const btnReady = document.getElementById('filterAmbReady');
+    const btnIssues = document.getElementById('filterAmbIssues');
+    const btnPending = document.getElementById('filterAmbPending');
 
-    if (saved && saved.inspectorName) {
-      inspector = saved.inspectorName;
+    [btnAll, btnReady, btnIssues, btnPending].forEach(b => {
+      if (b) {
+        b.className = 'touch-btn px-3 sm:px-4 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:bg-slate-100';
+      }
+    });
+
+    const activeCls = 'touch-btn px-3 sm:px-4 py-1.5 rounded-xl text-xs font-bold transition bg-white text-purple-900 shadow-sm border border-slate-200/80';
+    if (filter === 'ALL' && btnAll) btnAll.className = activeCls;
+    if (filter === 'READY' && btnReady) btnReady.className = activeCls;
+    if (filter === 'ISSUES' && btnIssues) btnIssues.className = activeCls;
+    if (filter === 'PENDING' && btnPending) btnPending.className = activeCls;
+
+    renderAmbulanceStatusDashboard();
+  }
+
+  function buildAmbulanceReportHtml(specificStationId, specificCarIndex) {
+    const stationId = specificStationId || currentAmbStationId || (document.getElementById('ambStationSelect') ? document.getElementById('ambStationSelect').value : 'st1');
+    const carIdx = (specificCarIndex === 2) ? 2 : (currentAmbCarIndex || 1);
+
+    const stationInfo = (typeof STATIONS_INFO !== 'undefined') ? STATIONS_INFO[stationId] : null;
+    const stationName = stationInfo ? stationInfo.name : stationId;
+
+    const rawSpecific = localStorage.getItem(`amb_checklist_${stationId}_car${carIdx}`);
+    const rawLegacy = (carIdx === 1) ? localStorage.getItem(`amb_checklist_${stationId}`) : null;
+    let saved = null;
+    const raw = rawSpecific || rawLegacy;
+    if (raw) {
+      try { saved = JSON.parse(raw); } catch(e) {}
     }
 
-    const nowStr = new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', year: 'numeric', month: 'short', day: 'numeric' });
+    const inspector = saved ? (saved.inspectorName || '-') : (document.getElementById('ambInspectorInput') ? document.getElementById('ambInspectorInput').value : '-');
+    const vehDesc = saved ? (saved.vehicleDesc || '-') : (document.getElementById('ambVehicleInput') ? document.getElementById('ambVehicleInput').value : (stationInfo ? stationInfo.vehicleDesc : '-'));
+    const unreadyNotes = saved ? (saved.unreadyNotes || '') : (document.getElementById('ambUnreadyNotesInput') ? document.getElementById('ambUnreadyNotesInput').value : '');
+    const nowStr = saved ? (saved.timestamp ? new Date(saved.timestamp).toLocaleDateString('th-TH') : new Date().toLocaleDateString('th-TH')) : new Date().toLocaleDateString('th-TH');
 
-    const currentCatalog = getAmbulanceCatalogForStation(currentStKey);
-    const isSt9 = (currentStKey === 'st9' || (currentStKey && String(currentStKey).includes('9')));
+    const currentCatalog = getAmbulanceCatalogForStation(stationId);
+    const activeState = (saved && saved.items) ? saved.items : ambItemState;
+
     const categories = [...new Set(currentCatalog.map(i => i.cat))];
     let rowsHtml = '';
 
     categories.forEach(cat => {
-      // Category Header row matching Images 3, 4, 5 (Grey background #d1d5db, crisp black borders)
       rowsHtml += `
-        <tr class="pdf-category-row" style="background:#e5e7eb; font-weight:bold; color:#000000; border:1px solid #000000; page-break-inside:avoid !important; break-inside:avoid !important;">
-          <td style="padding:5px 8px; font-size:11.5px; border:1px solid #000000; font-weight:bold; text-align:left;">${cat}</td>
-          <td style="padding:5px 8px; font-size:11.5px; border:1px solid #000000; font-weight:bold; text-align:center; width:65px;">จำนวน</td>
-          <td style="padding:5px 8px; font-size:11.5px; border:1px solid #000000; font-weight:bold; text-align:center; width:95px;">มี/ไม่มี</td>
+        <tr style="background:#e5e7eb; font-weight:bold; font-size:12px; page-break-inside:avoid !important; break-inside:avoid !important;">
+          <td style="padding:5px 8px; border:1px solid #000000; text-align:left;">${cat}</td>
+          <td style="padding:5px 4px; border:1px solid #000000; text-align:center; width:65px;">จำนวน</td>
+          <td style="padding:5px 4px; border:1px solid #000000; text-align:center; width:65px;">มี/ไม่มี</td>
         </tr>
       `;
 
       const catItems = currentCatalog.filter(i => i.cat === cat);
       catItems.forEach(item => {
-        const s = ambItemState[item.id] || (saved && saved.items && saved.items[item.id]) || { status: 'ready', actualQty: item.defaultQty, notes: '' };
-        
-        let statusText = 'มี';
-        if (s.status === 'not_ready') {
-          statusText = 'ชำรุด';
-        } else if (s.status === 'no_equipment') {
-          statusText = 'ไม่มี';
-        }
+        const s = activeState[item.id] || { status: '' };
+        let statusMark = '';
+        if (s.status === 'ready') statusMark = 'มี';
+        else if (s.status === 'not_ready') statusMark = 'ชำรุด';
+        else if (s.status === 'no_equipment') statusMark = 'ไม่มี';
 
-        // Clean table row with break-inside avoid
         rowsHtml += `
-          <tr class="pdf-item-row" style="border:1px solid #000000; font-size:11px; page-break-inside:avoid !important; break-inside:avoid !important;">
-            <td style="padding:4px 8px; border:1px solid #000000; color:#000000; text-align:left; vertical-align:middle; line-height:1.25;">
-              ${item.name}
-            </td>
-            <td style="padding:4px 6px; border:1px solid #000000; color:#000000; text-align:center; font-weight:normal; width:65px; vertical-align:middle;">
-              ${item.quota}
-            </td>
-            <td style="padding:4px 6px; border:1px solid #000000; color:#000000; text-align:center; font-weight:bold; width:95px; vertical-align:middle;">
-              ${statusText}
-            </td>
+          <tr style="font-size:11.5px; page-break-inside:avoid !important; break-inside:avoid !important;">
+            <td style="padding:4px 8px; border:1px solid #000000; text-align:left;">${item.name}</td>
+            <td style="padding:4px 4px; border:1px solid #000000; text-align:center;">${item.quota}</td>
+            <td style="padding:4px 4px; border:1px solid #000000; text-align:center; font-weight:bold;">${statusMark}</td>
           </tr>
         `;
       });
     });
 
-    return `
-      <div id="pdfPrintableArea" style="font-family:'Sarabun', 'TH Sarabun New', -apple-system, sans-serif; color:#000000; max-width:800px; margin:0 auto; background:#ffffff; padding:0;">
-        
-        <!-- Document Print Styles to prevent row split and page cutoff -->
-        <style>
-          @page {
-            size: A4 portrait;
-            margin: 10mm 10mm 10mm 10mm;
-          }
-          @media print {
-            body { margin: 0; padding: 0; background: #fff !important; }
-            .no-print { display: none !important; }
-            #pdfPrintableArea { width: 100% !important; max-width: 100% !important; padding: 0 !important; }
-            table { page-break-inside: auto; width: 100% !important; }
-            tr { page-break-inside: avoid !important; break-inside: avoid !important; }
-            td, th { page-break-inside: avoid !important; break-inside: avoid !important; }
-          }
-          .pdf-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: 1px solid #000000;
-          }
-          .pdf-table th, .pdf-table td {
-            border: 1px solid #000000;
-          }
-          .pdf-table tr {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-        </style>
+    let unreadyReportHtml = '';
+    if (unreadyNotes && unreadyNotes.trim()) {
+      unreadyReportHtml = `
+        <div style="margin-top:6px; font-weight:bold; color:#000000;">
+          ${unreadyNotes.trim().replace(/\n/g, '<br>')}
+        </div>
+      `;
+    } else {
+      unreadyReportHtml = '<div style="margin-top:4px; color:#444444;">- ไม่มีรายงานอุปกรณ์ชำรุดเพิ่มเติม (อุปกรณ์พร้อมใช้งานครบถ้วน) -</div>';
+    }
 
-        <!-- Meta Header Box (Clean Black & White) -->
-        <div style="border:1px solid #000000; padding:8px 12px; margin-bottom:10px; font-size:11px; background:#fafafa; display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-          <div><strong>Station:</strong> ${stName}</div>
+    return `
+      <div class="pdf-page-container" style="font-family:'Sarabun', sans-serif; color:#000000; background:#ffffff; max-width:800px; margin:0 auto; padding:15px;">
+        <!-- Header Info Table -->
+        <div style="margin-bottom:12px; display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11.5px; border-bottom:1.5px solid #000000; padding-bottom:8px;">
+          <div><strong>Station:</strong> ${stationName}</div>
           <div><strong>Inspector:</strong> ${inspector}</div>
-          <div><strong>Vehicle:</strong> ${vehDesc}</div>
+          <div><strong>Vehicle:</strong> ${vehDesc} (คันที่ ${carIdx})</div>
           <div><strong>Date:</strong> ${nowStr}</div>
         </div>
 
-        <!-- Official Black & White Checklist Table matching Images 3, 4, 5 -->
+        <!-- Official Black & White Checklist Table -->
         <table class="pdf-table" style="width:100%; border-collapse:collapse; border:1px solid #000000;">
           <thead>
             <tr style="page-break-inside:avoid !important; break-inside:avoid !important;">
@@ -7180,8 +7396,16 @@
           </tbody>
         </table>
 
+        <!-- Unready Equipment Section in PDF -->
+        <div style="border:1px solid #000000; margin-top:10px; padding:8px 12px; font-size:11px; background:#fafafa; page-break-inside:avoid !important; break-inside:avoid !important;">
+          <div style="font-weight:bold; font-size:11.5px; margin-bottom:4px; text-decoration:underline;">
+            รายงานอุปกรณ์ที่ไม่พร้อมใช้งาน:
+          </div>
+          ${unreadyReportHtml}
+        </div>
+
         <!-- Signatures (Page-break avoid) -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:25px; page-break-inside:avoid !important; break-inside:avoid !important;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:20px; page-break-inside:avoid !important; break-inside:avoid !important;">
           <div style="text-align:center; font-size:11px; border-top:1px dashed #000000; padding-top:6px;">
             <div>ลงชื่อผู้ตรวจ (Inspector)</div>
             <div style="font-weight:bold; margin-top:3px;">(${inspector})</div>
@@ -7196,8 +7420,8 @@
     `;
   }
 
-  function generateAmbulancePDFReport(specificStationId) {
-    const reportHtml = buildAmbulanceReportHtml(specificStationId);
+  function generateAmbulancePDFReport(specificStationId, specificCarIndex) {
+    const reportHtml = buildAmbulanceReportHtml(specificStationId, specificCarIndex);
     const container = document.getElementById('printableReportContainer');
     if (container) {
       container.innerHTML = reportHtml;
@@ -7225,7 +7449,8 @@
     let stationInfo = (typeof STATIONS_INFO !== 'undefined') ? STATIONS_INFO[currentStKey] : null;
     const rawName = stationInfo ? stationInfo.name : 'Station';
     const cleanName = rawName.replace(/[^a-zA-Z0-9ก-๙]/g, '_');
-    const filename = 'Ambulance_Report_' + cleanName + '_' + new Date().toISOString().slice(0, 10) + '.pdf';
+    const carSuffix = (currentAmbCarIndex === 2) ? '_Car2' : '_Car1';
+    const filename = 'Ambulance_Report_' + cleanName + carSuffix + '_' + new Date().toISOString().slice(0, 10) + '.pdf';
 
     if (typeof html2pdf !== 'undefined') {
       const opt = {
@@ -7236,11 +7461,22 @@
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
       };
-      html2pdf().set(opt).from(container).save();
+
+      showToast('Generating official PDF report...');
+      html2pdf().set(opt).from(container).save()
+        .then(() => {
+          showToast('PDF downloaded successfully');
+        })
+        .catch(err => {
+          console.error('PDF generation error:', err);
+          showToast('PDF generation failed, printing fallback...');
+          window.print();
+        });
     } else {
       window.print();
     }
   }
+
 
   // Hook into station selection change & load
   window.addEventListener('DOMContentLoaded', () => {
