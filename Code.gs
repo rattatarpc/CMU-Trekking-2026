@@ -559,22 +559,23 @@ function saveAmbulanceChecklist(data) {
       sheet = ss.getSheetByName(AMBULANCE_SHEET_NAME);
     }
 
-    const carNoStr = data.carIndex ? ('คันที่ ' + data.carIndex) : 'คันที่ 1';
+    const carIdxVal = data.carIndex || data.vehicleNo || 1;
+    const carNoStr = 'คันที่ ' + carIdxVal;
     const row = [
       id,
       timestampStr,
       data.stationName || data.stationId || '',
       carNoStr,
       data.vehicleDesc || '',
-      data.inspectorName || '',
+      data.inspectorName || data.inspector || '',
       data.overallStatus || 'พร้อมใช้งาน',
-      data.summaryTotal || 0,
-      data.summaryReady || 0,
-      data.summaryNotReady || 0,
-      data.summaryNoEquipment || 0,
-      data.defectsSummary || '-',
+      data.summaryTotal || data.totalItems || 0,
+      data.summaryReady || data.readyCount || 0,
+      data.summaryNotReady || data.notReadyCount || 0,
+      data.summaryNoEquipment || data.noEquipCount || 0,
+      data.defectsSummary || data.issues || '-',
       data.unreadyNotes || '-',
-      JSON.stringify(data.itemsData || data.items || [])
+      (typeof data.itemsJson === 'string' ? data.itemsJson : JSON.stringify(data.itemsData || data.items || {}))
     ];
 
     sheet.appendRow(row);
