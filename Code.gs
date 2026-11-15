@@ -152,14 +152,24 @@ function getOrCreateSheet() {
       sheet.setFrozenRows(1);
     }
   }
-  if (sheet.getLastRow() > 0 && sheet.getLastColumn() < HEADERS.length) {
-    const diff = HEADERS.length - sheet.getLastColumn();
-    const newCols = HEADERS.slice(sheet.getLastColumn());
-    const range = sheet.getRange(1, sheet.getLastColumn() + 1, 1, diff);
-    range.setValues([newCols]);
-    range.setBackground('#5b4a8e');
-    range.setFontColor('#ffffff');
-    range.setFontWeight('bold');
+  // Auto-verify and fix missing/blank headers in Row 1 (e.g. AG: Case_Type, AH: Photo_URL, AI: Minor_Count, AL: High_Risk, AM: High_Risk_Reason)
+  if (sheet.getLastRow() > 0) {
+    const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
+    const currentHeaderValues = headerRange.getValues()[0];
+    let needsUpdate = false;
+    for (let i = 0; i < HEADERS.length; i++) {
+      if (!currentHeaderValues[i] || String(currentHeaderValues[i]).trim() !== HEADERS[i]) {
+        currentHeaderValues[i] = HEADERS[i];
+        needsUpdate = true;
+      }
+    }
+    if (needsUpdate) {
+      headerRange.setValues([currentHeaderValues]);
+      headerRange.setBackground('#5b4a8e');
+      headerRange.setFontColor('#ffffff');
+      headerRange.setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
   }
   return sheet;
 }
@@ -594,4 +604,23 @@ function saveAmbulanceChecklist(data) {
   } finally {
     lock.releaseLock();
   }
+}
+
+/**
+ * ฟังก์ชันสำหรับกดรันใน Apps Script Editor เพื่อซ่อมแซมและเติมชื่อคอลัมน์ Row 1 ทั้งหมดให้อัตโนมัติทันที
+ */
+function fixSheetHeaders() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    Logger.log('Sheet not found: ' + SHEET_NAME);
+    return;
+  }
+  const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
+  headerRange.setValues([HEADERS]);
+  headerRange.setBackground('#5b4a8e');
+  headerRange.setFontColor('#ffffff');
+  headerRange.setFontWeight('bold');
+  sheet.setFrozenRows(1);
+  Logger.log('Headers successfully repaired and synchronized: ' + HEADERS.join(', '));
 }
