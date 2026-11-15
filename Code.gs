@@ -337,12 +337,22 @@ function savePhotoToDrive(caseId, photoInput, index) {
 }
 
 /**
- * ฟังก์ชันสำหรับกดเรียกใช้ (Run) ใน Apps Script เพื่อขออนุญาตสิทธิ์ Google Drive ครั้งแรก
+ * ฟังก์ชันสำหรับกดเรียกใช้ (Run) ใน Apps Script เพื่อขออนุญาตสิทธิ์ Google Drive (ทั้งอ่านและเขียนสร้างไฟล์)
  */
 function authorizePermissions() {
-  const folders = DriveApp.getFoldersByName('CMU_Trekking_2026_Photos');
+  const folderName = 'CMU_Trekking_2026_Photos';
+  let folder;
+  const folders = DriveApp.getFoldersByName(folderName);
+  if (folders.hasNext()) {
+    folder = folders.next();
+  } else {
+    folder = DriveApp.createFolder(folderName);
+  }
+  // ทดสอบสร้างและลบไฟล์ชั่วคราว เพื่อบังคับให้ Google ขอสิทธิ์เขียนไฟล์ (https://www.googleapis.com/auth/drive)
+  const tempFile = folder.createFile('auth_test.txt', 'Test permission');
+  tempFile.setTrashed(true);
   SpreadsheetApp.getActiveSpreadsheet();
-  Logger.log('Drive and Spreadsheet permissions authorized successfully!');
+  Logger.log('Drive (Full Write/Create) and Spreadsheet authorized successfully!');
 }
 
 function saveOrUpdateCase(caseData) {
