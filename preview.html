@@ -1711,6 +1711,7 @@
         timingDesc: 'ขาลง: ประจำการถึงฐาน 11.30 น.'
       }
     };
+    window.STATIONS_INFO = STATIONS_INFO;
 
     function toggleStaffLogisticsBox() {
       const content = document.getElementById('staffLogisticsContent');
@@ -2972,13 +2973,12 @@
             APP_STATE.cases = response.cases || [];
             APP_STATE.ambulanceChecklists = response.ambulanceChecklists || {};
 
-            // In live GAS web app, clear legacy demo records and sync real sheet records
-            for (let i = 1; i <= 11; i++) {
-              localStorage.removeItem('amb_checklist_st' + i);
-            }
-            if (response.ambulanceChecklists) {
-              Object.keys(response.ambulanceChecklists).forEach(stId => {
-                localStorage.setItem('amb_checklist_' + stId, JSON.stringify(response.ambulanceChecklists[stId]));
+            // Sync real sheet records into localStorage without deleting other valid records
+            if (response.ambulanceChecklists && typeof response.ambulanceChecklists === 'object') {
+              Object.keys(response.ambulanceChecklists).forEach(k => {
+                try {
+                  localStorage.setItem('amb_checklist_' + k, JSON.stringify(response.ambulanceChecklists[k]));
+                } catch(e) {}
               });
             }
 
@@ -6238,7 +6238,10 @@
       <!-- Modal Header (Rounded matching container - Fix Image 2) -->
       <div class="px-4 sm:px-6 py-3.5 bg-gradient-to-r from-emerald-700 to-teal-800 text-white flex items-center justify-between sm:rounded-t-2xl flex-shrink-0">
         <div>
-          <h3 class="font-bold text-base sm:text-lg leading-tight">Ambulance Check</h3>
+          <div class="flex items-center gap-2">
+            <h3 class="font-bold text-base sm:text-lg leading-tight">Ambulance Check</h3>
+            <span id="ambModalCarTitleBadge" class="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-bold">คันที่ 1</span>
+          </div>
           <p id="ambModalStationSubtitle" class="text-xs text-emerald-100">Station 1 หน้า มช.</p>
         </div>
         <button type="button" onclick="closeAmbulanceChecklistModal()" class="text-white/80 hover:text-white text-2xl font-bold p-1 leading-none">&times;</button>
@@ -6272,27 +6275,9 @@
           <input type="text" id="ambInspectorInput" placeholder="" class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-semibold shadow-sm">
         </div>
 
-        <!-- Vehicle Unit Toggle (Car 1 vs Car 2) -->
-        <div class="sm:col-span-2 bg-purple-50/70 p-2.5 rounded-xl border border-purple-200/80 flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-purple-900">คันที่ประเมิน:</span>
-            <div class="inline-flex rounded-lg bg-white p-0.5 border border-purple-200 shadow-xs" id="ambCarToggleGroup">
-              <button type="button" onclick="switchAmbulanceCarIndex(1)" id="btnAmbCar1" class="px-3.5 py-1.5 rounded-md text-xs font-bold transition bg-purple-700 text-white shadow-xs">
-                คันที่ 1
-              </button>
-              <button type="button" onclick="switchAmbulanceCarIndex(2)" id="btnAmbCar2" class="px-3.5 py-1.5 rounded-md text-xs font-semibold transition text-purple-800 hover:bg-purple-100">
-                คันที่ 2
-              </button>
-            </div>
-          </div>
-          <div id="ambCarStatusBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">
-            คันที่ 1: รอการประเมิน
-          </div>
-        </div>
-
         <!-- Ambulance Vehicle Editable Input (No description, fully editable) -->
         <div class="sm:col-span-2">
-          <label class="block font-bold text-slate-700 mb-1">Ambulance Vehicle</label>
+          <label class="block font-bold text-slate-700 mb-1">Ambulance Vehicle (ชื่อ / ทะเบียนรถพยาบาล)</label>
           <input type="text" id="ambVehicleInput" placeholder="" class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2.5 bg-white text-slate-800 font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm">
         </div>
       </div>
@@ -6637,6 +6622,11 @@
     currentAmbStationId = stId;
     currentAmbCarIndex = (carIndex === 2) ? 2 : 1;
 
+    const titleBadge = document.getElementById('ambModalCarTitleBadge');
+    if (titleBadge) {
+      titleBadge.textContent = `คันที่ ${currentAmbCarIndex}`;
+    }
+
     const selectEl = document.getElementById('ambStationSelect');
     if (selectEl) selectEl.value = stId;
 
@@ -6663,16 +6653,9 @@
   }
 
   function updateAmbCarToggleUI(carIdx) {
-    const btn1 = document.getElementById('btnAmbCar1');
-    const btn2 = document.getElementById('btnAmbCar2');
-    if (!btn1 || !btn2) return;
-
-    if (carIdx === 1) {
-      btn1.className = 'px-3.5 py-1.5 rounded-md text-xs font-bold transition bg-purple-700 text-white shadow-xs';
-      btn2.className = 'px-3.5 py-1.5 rounded-md text-xs font-semibold transition text-purple-800 hover:bg-purple-100';
-    } else {
-      btn2.className = 'px-3.5 py-1.5 rounded-md text-xs font-bold transition bg-purple-700 text-white shadow-xs';
-      btn1.className = 'px-3.5 py-1.5 rounded-md text-xs font-semibold transition text-purple-800 hover:bg-purple-100';
+    const titleBadge = document.getElementById('ambModalCarTitleBadge');
+    if (titleBadge) {
+      titleBadge.textContent = `คันที่ ${carIdx}`;
     }
   }
 
@@ -6770,7 +6753,8 @@
     currentAmbCarIndex = (carIndex === 2) ? 2 : 1;
     updateAmbCarToggleUI(currentAmbCarIndex);
 
-    const stationInfo = (typeof STATIONS_INFO !== 'undefined') ? STATIONS_INFO[stationId] : null;
+    const allStInfo = (window.STATIONS_INFO || (typeof STATIONS_INFO !== 'undefined' ? STATIONS_INFO : {}));
+    const stationInfo = allStInfo[stationId] || null;
     const vehInput = document.getElementById('ambVehicleInput');
     const inspInput = document.getElementById('ambInspectorInput');
     const unreadyNotesInput = document.getElementById('ambUnreadyNotesInput');
@@ -6797,10 +6781,12 @@
       }
     }
 
-    if (saved && saved.inspectorName && inspInput) {
-      inspInput.value = saved.inspectorName;
-    } else if (inspInput) {
-      inspInput.value = (typeof APP_STATE !== 'undefined' && APP_STATE.staffName) ? APP_STATE.staffName : '';
+    if (inspInput) {
+      if (saved && saved.inspectorName && !saved.inspectorName.includes('หน่วยยานพาหนะ') && !saved.inspectorName.includes('รถพยาบาล') && !saved.inspectorName.includes('คัน')) {
+        inspInput.value = saved.inspectorName;
+      } else {
+        inspInput.value = (typeof APP_STATE !== 'undefined' && APP_STATE.staffName && APP_STATE.staffName !== 'Staff') ? APP_STATE.staffName : ((typeof APP_STATE !== 'undefined' && APP_STATE.isCommander) ? 'Commander' : '');
+      }
     }
 
     if (unreadyNotesInput) {
@@ -7022,23 +7008,29 @@
     const overallStatus = (notReadyCount === 0 && noEquipCount === 0 && uncheckedCount === 0) ? 'Ready' : 'Needs Attention';
 
     const now = new Date();
-    const nowTimeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const nowTimeStr = `${hh}:${mm} น.`;
     const nowIso = now.toISOString();
 
     const record = {
       stationId: stationId,
       carIndex: currentAmbCarIndex,
+      vehicleNo: `คันที่ ${currentAmbCarIndex}`,
       inspectorName: inspector,
       vehicleDesc: vehicleDesc,
       unreadyNotes: unreadyNotes,
       timestamp: nowIso,
       evalTime: nowTimeStr,
+      completedAt: nowTimeStr,
       overallStatus: overallStatus,
       readyCount: readyCount,
       notReadyCount: notReadyCount,
       noEquipCount: noEquipCount,
       totalItems: total,
       issues: itemsSummary,
+      defectsSummary: itemsSummary.join('; '),
       items: ambItemState
     };
 
@@ -7047,6 +7039,32 @@
     if (currentAmbCarIndex === 1) {
       localStorage.setItem(`amb_checklist_${stationId}`, JSON.stringify(record));
     }
+
+    if (typeof APP_STATE !== 'undefined') {
+      if (!APP_STATE.ambulanceChecklists) APP_STATE.ambulanceChecklists = {};
+      APP_STATE.ambulanceChecklists[`${stationId}_car${currentAmbCarIndex}`] = record;
+      if (currentAmbCarIndex === 1) {
+        APP_STATE.ambulanceChecklists[stationId] = record;
+      }
+    }
+
+    const payload = {
+      stationId: stationId,
+      stationName: (window.STATIONS_INFO && window.STATIONS_INFO[stationId]) ? window.STATIONS_INFO[stationId].name : stationId,
+      vehicleNo: currentAmbCarIndex,
+      inspector: inspector,
+      inspectorName: inspector,
+      vehicleDesc: vehicleDesc,
+      unreadyNotes: unreadyNotes,
+      overallStatus: overallStatus,
+      readyCount: readyCount,
+      notReadyCount: notReadyCount,
+      noEquipCount: noEquipCount,
+      totalItems: total,
+      issues: itemsSummary.join('; '),
+      defectsSummary: itemsSummary.join('; '),
+      itemsJson: JSON.stringify(ambItemState)
+    };
 
     // Attempt backend sync
     if (typeof google !== 'undefined' && google.script && google.script.run) {
@@ -7057,19 +7075,16 @@
         .withFailureHandler(err => {
           console.warn('Backend sync failed, stored locally:', err);
         })
-        .saveAmbulanceChecklist({
-          stationId: stationId,
-          vehicleNo: currentAmbCarIndex,
-          inspector: inspector,
-          vehicleDesc: vehicleDesc,
-          unreadyNotes: unreadyNotes,
-          overallStatus: overallStatus,
-          readyCount: readyCount,
-          notReadyCount: notReadyCount,
-          noEquipCount: noEquipCount,
-          issues: itemsSummary.join('; '),
-          itemsJson: JSON.stringify(ambItemState)
-        });
+        .saveAmbulanceChecklist(payload);
+    } else if (typeof GAS_WEB_APP_URL !== 'undefined' && GAS_WEB_APP_URL) {
+      try {
+        fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'saveAmbulanceChecklist', ...payload })
+        }).catch(err => console.warn('Fetch fallback warning:', err));
+      } catch(e) {}
     }
 
     showToast(`บันทึกผลการตรวจรถพยาบาลคันที่ ${currentAmbCarIndex} เรียบร้อยแล้ว`);
@@ -7083,52 +7098,114 @@
     closeAmbulanceChecklistModal();
   }
 
+  function formatDisplayTime(val) {
+    if (!val || val === '-') return '-';
+    const s = String(val).trim();
+    if (s.includes('น.') && !s.includes('Nov')) return s;
+    const match = s.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (match) {
+      const hh = match[1].padStart(2, '0');
+      const mm = match[2].padStart(2, '0');
+      return `${hh}:${mm} น.`;
+    }
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm} น.`;
+    }
+    return s.replace(/Nov\s*น\.?/gi, '-');
+  }
+
   function updateStationAmbulanceBadge(stationId) {
     const badge = document.getElementById('badgeStationAmbulanceStatus');
     const multiContainer = document.getElementById('stVehicleMultiCarStatus');
     const actionBtns = document.getElementById('stAmbulanceActionBtns');
-    const lblCar1 = document.getElementById('lblCheckCar1');
-    const btnCar2 = document.getElementById('btnStationCheckCar2');
 
     const raw1 = localStorage.getItem(`amb_checklist_${stationId}_car1`) || localStorage.getItem(`amb_checklist_${stationId}`);
     const raw2 = localStorage.getItem(`amb_checklist_${stationId}_car2`);
-
-    const stationInfo = (typeof STATIONS_INFO !== 'undefined') ? STATIONS_INFO[stationId] : null;
-    const hasTwo = (stationInfo && stationInfo.vehicleDesc && stationInfo.vehicleDesc.includes('2 คัน')) || !!raw2;
-
-    if (btnCar2) {
-      if (hasTwo) {
-        btnCar2.classList.remove('hidden');
-        if (lblCar1) lblCar1.textContent = 'คันที่ 1';
-      } else {
-        btnCar2.classList.add('hidden');
-        if (lblCar1) lblCar1.textContent = 'Ambulance Check';
-      }
-    }
 
     let d1 = null, d2 = null;
     if (raw1) { try { d1 = JSON.parse(raw1); } catch(e) {} }
     if (raw2) { try { d2 = JSON.parse(raw2); } catch(e) {} }
 
+    const allStInfo = (window.STATIONS_INFO || (typeof STATIONS_INFO !== 'undefined' ? STATIONS_INFO : {}));
+    const stationInfo = allStInfo[stationId] || null;
+    const hasTwo = (stationInfo && stationInfo.vehicleDesc && stationInfo.vehicleDesc.includes('2 คัน')) || ['st8', 'st9', 'st10', 'st11'].includes(stationId) || !!d2;
+
     if (multiContainer) {
-      if (hasTwo) {
+      if (d1 || d2) {
         multiContainer.classList.remove('hidden');
         let html = '';
-        html += `
-          <div class="flex items-center justify-between py-0.5 px-2 rounded-lg ${d1 ? (d1.overallStatus === 'Ready' || d1.overallStatus === 'พร้อมใช้งาน' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900') : 'bg-slate-100 text-slate-500'}">
-            <span class="font-bold">คันที่ 1: ${d1 ? d1.overallStatus : 'รอตรวจ'}</span>
-            <span class="text-[10px]">${d1 ? (d1.evalTime || '') : ''}</span>
-          </div>
-          <div class="flex items-center justify-between py-0.5 px-2 rounded-lg ${d2 ? (d2.overallStatus === 'Ready' || d2.overallStatus === 'พร้อมใช้งาน' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900') : 'bg-slate-100 text-slate-500'}">
-            <span class="font-bold">คันที่ 2: ${d2 ? d2.overallStatus : 'รอตรวจ'}</span>
-            <span class="text-[10px]">${d2 ? (d2.evalTime || '') : ''}</span>
-          </div>
-        `;
+        if (d1) {
+          const isR1 = (d1.overallStatus === 'Ready' || d1.overallStatus === 'พร้อมใช้งาน');
+          const t1 = formatDisplayTime(d1.evalTime || d1.completedAt || d1.timestamp);
+          html += `
+            <div class="flex items-center justify-between py-1 px-2.5 rounded-lg ${isR1 ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}">
+              <span class="font-bold">คันที่ 1: ${d1.overallStatus}</span>
+              <span class="text-[11px]">${t1}</span>
+            </div>
+          `;
+        }
+        if (d2) {
+          const isR2 = (d2.overallStatus === 'Ready' || d2.overallStatus === 'พร้อมใช้งาน');
+          const t2 = formatDisplayTime(d2.evalTime || d2.completedAt || d2.timestamp);
+          html += `
+            <div class="flex items-center justify-between py-1 px-2.5 rounded-lg ${isR2 ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}">
+              <span class="font-bold">คันที่ 2: ${d2.overallStatus}</span>
+              <span class="text-[11px]">${t2}</span>
+            </div>
+          `;
+        }
         multiContainer.innerHTML = html;
       } else {
         multiContainer.classList.add('hidden');
         multiContainer.innerHTML = '';
       }
+    }
+
+    if (actionBtns) {
+      let btnsHtml = '';
+      if (!d1 && !d2) {
+        // Initial state: not evaluated yet
+        btnsHtml = `
+          <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 1)" class="w-full touch-btn py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Ambulance Check</span>
+          </button>
+        `;
+      } else if (d1 && !d2) {
+        // Car 1 evaluated, Car 2 not yet
+        btnsHtml = `
+          <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 1)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl border border-emerald-600 bg-white hover:bg-emerald-50 active:scale-[0.98] text-emerald-700 font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition" title="คลิกเพื่อแก้ไขข้อมูลการประเมินคันที่ 1">
+            <span>✏️ แก้ไข คันที่ 1</span>
+          </button>
+          <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 2)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition" title="ประเมินรถพยาบาลคันที่ 2 ประจำฐาน">
+            <span>➕ เพิ่มประเมินอีกคัน</span>
+          </button>
+        `;
+      } else if (!d1 && d2) {
+        // Car 2 evaluated, Car 1 not yet
+        btnsHtml = `
+          <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 1)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition">
+            <span>Ambulance Check (คันที่ 1)</span>
+          </button>
+          <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 2)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl border border-purple-600 bg-white hover:bg-purple-50 active:scale-[0.98] text-purple-700 font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition" title="คลิกเพื่อแก้ไขข้อมูลการประเมินคันที่ 2">
+            <span>✏️ แก้ไข คันที่ 2</span>
+          </button>
+        `;
+      } else {
+        // Both evaluated: both editable
+        btnsHtml = `
+          <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 1)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl border border-emerald-600 bg-white hover:bg-emerald-50 active:scale-[0.98] text-emerald-700 font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition" title="คลิกเพื่อแก้ไขข้อมูลการประเมินคันที่ 1">
+            <span>✏️ แก้ไข คันที่ 1</span>
+          </button>
+          <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 2)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl border border-purple-600 bg-white hover:bg-purple-50 active:scale-[0.98] text-purple-700 font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition" title="คลิกเพื่อแก้ไขข้อมูลการประเมินคันที่ 2">
+            <span>✏️ แก้ไข คันที่ 2</span>
+          </button>
+        `;
+      }
+      actionBtns.innerHTML = btnsHtml;
     }
 
     if (!badge) return;
@@ -7171,9 +7248,10 @@
   function renderAmbulanceStatusDashboard() {
     initAmbulanceBaselineData();
 
+    const allStInfo = (window.STATIONS_INFO || (typeof STATIONS_INFO !== 'undefined' ? STATIONS_INFO : {}));
     const stations = (typeof APP_STATE !== 'undefined' && APP_STATE.stations && APP_STATE.stations.length > 0)
-      ? APP_STATE.stations
-      : Object.keys(STATIONS_INFO).map(k => ({ id: k, name: STATIONS_INFO[k].name }));
+      ? APP_STATE.stations.slice(0, 11)
+      : Object.keys(allStInfo).slice(0, 11).map(k => ({ id: k, name: allStInfo[k].name }));
 
     let readyCount = 0;
     let issueCount = 0;
@@ -7184,12 +7262,13 @@
 
     stations.forEach(st => {
       try {
-        const stInfo = (typeof STATIONS_INFO !== 'undefined') ? STATIONS_INFO[st.id] : null;
+        const stInfo = allStInfo[st.id] || null;
         const vehDesc = stInfo ? stInfo.vehicleDesc : '-';
         const raw1 = localStorage.getItem(`amb_checklist_${st.id}_car1`) || localStorage.getItem(`amb_checklist_${st.id}`);
         const raw2 = localStorage.getItem(`amb_checklist_${st.id}_car2`);
 
-        const hasTwo = (stInfo && stInfo.vehicleDesc && stInfo.vehicleDesc.includes('2 คัน')) || !!raw2;
+        // Stations 8, 9, 10, 11 have 2 cars from the beginning or if Car 2 is recorded
+        const hasTwo = (stInfo && stInfo.vehicleDesc && stInfo.vehicleDesc.includes('2 คัน')) || ['st8', 'st9', 'st10', 'st11'].includes(st.id) || !!raw2;
 
         let d1 = null, d2 = null;
         if (raw1) { try { d1 = JSON.parse(raw1); } catch(e) {} }
@@ -7317,8 +7396,8 @@
             : '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Pending Inspection</span>');
 
         const carVehName = data && data.vehicleDesc ? data.vehicleDesc : item.vehDesc;
-        const inspector = data && data.inspectorName ? data.inspectorName : '-';
-        const time = data && data.evalTime ? data.evalTime : '-';
+        const inspector = (data && data.inspectorName && !data.inspectorName.includes('หน่วยยานพาหนะ') && !data.inspectorName.includes('รถพยาบาล') && !data.inspectorName.includes('คัน')) ? data.inspectorName : (data && data.inspectorName ? data.inspectorName : '-');
+        const time = formatDisplayTime(data ? (data.evalTime || data.completedAt || data.timestamp) : '-');
         const unreadyNotes = data && data.unreadyNotes ? data.unreadyNotes : '';
 
         let defectHtml = '';
@@ -7600,6 +7679,16 @@
     }
   }
 
+
+  // Expose ambulance functions to global scope
+  window.renderAmbulanceStatusDashboard = renderAmbulanceStatusDashboard;
+  window.updateStationAmbulanceBadge = updateStationAmbulanceBadge;
+  window.openAmbulanceChecklistModal = openAmbulanceChecklistModal;
+  window.closeAmbulanceChecklistModal = closeAmbulanceChecklistModal;
+  window.saveAmbulanceChecklist = saveAmbulanceChecklist;
+  window.generateAmbulancePDFReport = generateAmbulancePDFReport;
+  window.filterAmbulanceStatusView = filterAmbulanceStatusView;
+  window.formatDisplayTime = formatDisplayTime;
 
   // Hook into station selection change & load
   window.addEventListener('DOMContentLoaded', () => {

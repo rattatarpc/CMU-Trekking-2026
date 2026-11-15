@@ -240,27 +240,46 @@ function getInitialData() {
           }
           if (!matchedStId) matchedStId = stRaw;
 
+          const carNoStr = formatCell(r[3]); // e.g. "คันที่ 1" or "คันที่ 2"
+          let carIdx = 1;
+          const carMatch = carNoStr.match(/\d+/);
+          if (carMatch) carIdx = parseInt(carMatch[0], 10);
+
           let itemsObj = {};
           try {
-            itemsObj = JSON.parse(r[11]);
+            itemsObj = JSON.parse(r[13]);
           } catch(e) {}
 
-          ambulanceChecklists[matchedStId] = {
+          const timeFormatted = formatTimeOnly(r[1]);
+          const defectsStr = formatCell(r[11]);
+          const issuesList = defectsStr ? defectsStr.split('; ').filter(Boolean) : [];
+
+          const chkObj = {
             checklistId: formatCell(r[0]),
             timestamp: formatCell(r[1]),
+            evalTime: timeFormatted,
+            completedAt: timeFormatted,
             stationId: matchedStId,
             stationName: stRaw,
-            vehicleDesc: formatCell(r[3]),
-            inspectorName: formatCell(r[4]),
-            overallStatus: formatCell(r[5]),
-            summaryTotal: Number(r[6]) || 71,
-            summaryReady: Number(r[7]) || 0,
-            summaryNotReady: Number(r[8]) || 0,
-            summaryNoEquipment: Number(r[9]) || 0,
-            defectsSummary: formatCell(r[10]),
-            items: itemsObj,
-            completedAt: formatTimeOnly(r[1])
+            carIndex: carIdx,
+            vehicleNo: carNoStr || ('คันที่ ' + carIdx),
+            vehicleDesc: formatCell(r[4]),
+            inspectorName: formatCell(r[5]),
+            overallStatus: formatCell(r[6]),
+            totalItems: Number(r[7]) || 71,
+            readyCount: Number(r[8]) || 0,
+            notReadyCount: Number(r[9]) || 0,
+            noEquipCount: Number(r[10]) || 0,
+            defectsSummary: defectsStr,
+            issues: issuesList,
+            unreadyNotes: formatCell(r[12]),
+            items: itemsObj
           };
+
+          ambulanceChecklists[matchedStId + '_car' + carIdx] = chkObj;
+          if (carIdx === 1 || !ambulanceChecklists[matchedStId]) {
+            ambulanceChecklists[matchedStId] = chkObj;
+          }
         }
       }
     } catch(ambErr) {
