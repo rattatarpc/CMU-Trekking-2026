@@ -213,7 +213,7 @@
       <span>Connection Offline: Data saved locally</span>
     </div>
     <div class="flex items-center gap-2">
-      <button onclick="syncOfflineQueue()" class="bg-white text-red-700 hover:bg-red-50 text-xs px-3 py-1 rounded-full font-bold shadow transition">
+      <button onclick="handleSyncRetryClick()" class="bg-white text-red-700 hover:bg-red-50 text-xs px-3 py-1 rounded-full font-bold shadow transition">
         Sync (Retry)
       </button>
       <span id="pendingCountBadge" class="bg-red-800 text-xs px-2 py-0.5 rounded-full hidden">0 Pending</span>
@@ -1497,6 +1497,68 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
+    // ==========================================
+    // GITHUB PAGES / STANDALONE UNIVERSAL API BRIDGE
+    // ==========================================
+    const CURRENT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbzhBl-6kjzzRWhbF8N_hoStVZBMQnEnKlqVLf-Tmvcpl1CxiNZFJ2qrI6t2uz5id-o6/exec';
+    
+    // Auto-update legacy/cached URL in browser localStorage if outdated
+    let savedApiUrl = localStorage.getItem('cmu_gas_api_url');
+    if (savedApiUrl && !savedApiUrl.includes('AKfycbzhBl-6kjzzRWhbF8N_hoStVZBMQnEnKlqVLf-Tmvcpl1CxiNZFJ2qrI6t2uz5id-o6')) {
+      localStorage.setItem('cmu_gas_api_url', CURRENT_DEPLOYMENT_URL);
+      savedApiUrl = CURRENT_DEPLOYMENT_URL;
+    }
+    const GAS_WEB_APP_URL = savedApiUrl || CURRENT_DEPLOYMENT_URL;
+
+    // Universal Bridge: If running outside GAS iframe (e.g. GitHub Pages)
+    if ((typeof google === 'undefined' || !google.script || !google.script.run) && GAS_WEB_APP_URL) {
+      function createGasRunner(successHandler, failureHandler) {
+        const callApi = (action, payload) => {
+          let fetchPromise;
+          if (action === 'getInitialData') {
+            fetchPromise = fetch(GAS_WEB_APP_URL + '?action=getInitialData', {
+              method: 'GET',
+              redirect: 'follow',
+              cache: 'no-store'
+            });
+          } else {
+            fetchPromise = fetch(GAS_WEB_APP_URL, {
+              method: 'POST',
+              redirect: 'follow',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action, payload })
+            });
+          }
+
+          fetchPromise
+            .then(r => {
+              if (!r.ok) throw new Error('HTTP status ' + r.status);
+              return r.json();
+            })
+            .then(res => {
+              // Hide offline banner on any successful response
+              if (typeof APP_STATE !== 'undefined') APP_STATE.isOnline = true;
+              const banner = document.getElementById('offlineBanner');
+              if (banner) banner.classList.add('hidden');
+              if (successHandler) successHandler(res);
+            })
+            .catch(err => {
+              console.error('API Error (' + action + '):', err);
+              if (failureHandler) failureHandler(err);
+            });
+        };
+
+        return {
+          withSuccessHandler(fn) { return createGasRunner(fn, failureHandler); },
+          withFailureHandler(fn) { return createGasRunner(successHandler, fn); },
+          getInitialData() { callApi('getInitialData', {}); },
+          saveOrUpdateCase(data) { callApi('saveOrUpdateCase', data); },
+          saveAmbulanceChecklist(data) { callApi('saveAmbulanceChecklist', data); }
+        };
+      }
+      window.google = { script: { run: createGasRunner(null, null) } };
+    }
+
     // System State
     let APP_STATE = {
       stations: [
@@ -2328,9 +2390,21 @@
       }
     }
 
+    function handleSyncRetryClick() {
+      showToast('กำลังตรวจสอบการเชื่อมต่อและซิงค์ข้อมูล...');
+      const q = getOfflineQueue();
+      if (q.length > 0) {
+        syncOfflineQueue();
+      }
+      loadData(true);
+    }
+
     function syncOfflineQueue() {
       const q = getOfflineQueue();
-      if (q.length === 0) return;
+      if (q.length === 0) {
+        loadData(false);
+        return;
+      }
 
       const item = q.shift();
       localStorage.setItem('cmu_offline_queue', JSON.stringify(q));
@@ -2888,6 +2962,9 @@
         .withSuccessHandler(response => {
           icons.forEach(ic => ic.classList.remove('animate-spin'));
           if (response && response.success) {
+            APP_STATE.isOnline = true;
+            const offlineBannerEl = document.getElementById('offlineBanner');
+            if (offlineBannerEl) offlineBannerEl.classList.add('hidden');
             APP_STATE.stations = response.stations || [];
             APP_STATE.cases = response.cases || [];
             APP_STATE.ambulanceChecklists = response.ambulanceChecklists || {};
@@ -6547,10 +6624,10 @@
   }
 
   // Current Active Evaluation Variables
-  let currentAmbStationId = 'st1';
-  let currentAmbCarIndex = 1; // 1 or 2
-  let ambItemState = {};
-  let currentAmbFilter = 'ALL';
+  currentAmbStationId = 'st1';
+  var currentAmbCarIndex = 1; // 1 or 2
+  ambItemState = {};
+  currentAmbFilter = 'ALL';
 
   function openAmbulanceChecklistModal(targetStationId, carIndex) {
     const stId = targetStationId || (typeof APP_STATE !== 'undefined' && APP_STATE.currentStation && APP_STATE.currentStation !== 'ALL' && APP_STATE.currentStation !== 'AMBULANCE_STATUS' ? APP_STATE.currentStation : 'st1');
@@ -6755,9 +6832,15 @@
     const countLabel = isSt9 ? 'รายการอุปกรณ์ 72 รายการ (รวม Lucas เครื่องปั๊มหัวใจอัตโนมัติ ประจำฐาน 9 เชิงพระธาตุ)' : 'รายการอุปกรณ์ 71 รายการ (ตามเกณฑ์ มช. 2569)';
 
     let html = `
-      <div class="mb-2 px-1 flex items-center justify-between">
-        <span class="text-xs font-bold ${isSt9 ? 'text-purple-700' : 'text-slate-700'}">${countLabel}</span>
-        ${isSt9 ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">ฐาน 9: LUCAS CPR</span>' : ''}
+      <div class="mb-2.5 px-1 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xs sm:text-sm font-bold ${isSt9 ? 'text-purple-700' : 'text-slate-800'}">${countLabel}</span>
+          ${isSt9 ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">ฐาน 9: LUCAS CPR</span>' : ''}
+        </div>
+        <button type="button" onclick="scrollToUnreadyNotes()" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs border border-amber-300 transition active:scale-95 shadow-xs" title="เลื่อนลงไปยังช่องรายงานอุปกรณ์ชำรุด/ไม่มี">
+          <svg class="w-3.5 h-3.5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span>รายงานอุปกรณ์ชำรุด/ไม่มี (ระบุเอง) ↓</span>
+        </button>
       </div>
       <div class="w-full rounded-xl border border-slate-200 shadow-sm bg-white overflow-hidden">
         <table class="w-full table-fixed text-left border-collapse">
@@ -6833,19 +6916,37 @@
         </table>
       </div>
 
-      <!-- Unready Equipment Custom Report Box (รายงานอุปกรณ์ที่ไม่พร้อมใช้งาน ให้เพิ่มเอง - No description in box) -->
-      <div class="mt-4 p-3.5 bg-amber-50/70 rounded-xl border border-amber-200/90 space-y-2">
-        <div class="flex items-center justify-between">
-          <label class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
-            <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            <span>รายงานอุปกรณ์ที่ไม่พร้อมใช้งาน</span>
+      <!-- Unready Equipment Custom Report Box (รายงานอุปกรณ์ที่ไม่พร้อมใช้งาน / ชำรุด / ไม่มี เด่นชัด) -->
+      <div id="unreadyEquipmentReportSection" class="mt-5 p-4 sm:p-5 bg-amber-50 rounded-2xl border-2 border-amber-300 shadow-md space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 pb-2.5">
+          <label for="ambUnreadyNotesInput" class="font-bold text-amber-950 text-sm sm:text-base flex items-center gap-2 cursor-pointer">
+            <div class="w-7 h-7 rounded-lg bg-amber-200/80 text-amber-800 flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <span>รายงานอุปกรณ์ที่ไม่พร้อมใช้งาน / ชำรุด / ไม่มี (ระบุเพิ่มเติม)</span>
           </label>
+          <span class="text-xs font-bold text-amber-900 bg-amber-200 px-3 py-1 rounded-full border border-amber-300/80 shadow-xs">
+            พิมพ์เพิ่มได้เอง
+          </span>
         </div>
-        <textarea id="ambUnreadyNotesInput" rows="2" placeholder="" class="w-full text-xs rounded-xl border border-amber-300 p-2.5 bg-white text-slate-800 focus:ring-2 focus:ring-amber-500 focus:outline-none font-medium shadow-xs"></textarea>
+        <p class="text-xs sm:text-sm text-amber-900 leading-relaxed font-medium">
+          <span class="font-bold underline text-amber-950">การใช้งาน:</span> ผู้ตรวจสามารถพิมพ์รายละเอียดอุปกรณ์ที่ชำรุด, แบตเตอรี่เสื่อม, เกจ์วัดรั่ว, หรือเวชภัณฑ์ที่ต้องการขอเบิกเพิ่มด่วนได้ทันที
+        </p>
+        <textarea id="ambUnreadyNotesInput" rows="3" placeholder="" class="w-full text-xs sm:text-sm rounded-xl border border-amber-300 p-3 bg-white text-slate-800 focus:ring-2 focus:ring-amber-500 focus:outline-none font-medium shadow-inner"></textarea>
       </div>
     `;
 
     container.innerHTML = html;
+  }
+
+  
+  function scrollToUnreadyNotes() {
+    const section = document.getElementById('unreadyEquipmentReportSection');
+    const input = document.getElementById('ambUnreadyNotesInput');
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (input) setTimeout(() => input.focus(), 350);
+    }
   }
 
   function setAmbulanceItemStatus(itemId, status) {
@@ -7553,35 +7654,8 @@
 
   <script>
     // =========================================================================
-    // GITHUB PAGES <-> GOOGLE APPS SCRIPT API BRIDGE & QR CODE SCANNER
+    // QR CODE SCANNER & CAMERA CONTROLS
     // =========================================================================
-    // URL ของ Google Apps Script Web App (/exec)
-    const GAS_WEB_APP_URL = localStorage.getItem('cmu_gas_api_url') || 'https://script.google.com/macros/s/AKfycbzhBl-6kjzzRWhbF8N_hoStVZBMQnEnKlqVLf-Tmvcpl1CxiNZFJ2qrI6t2uz5id-o6/exec';
-
-    // Universal Bridge: If running on GitHub Pages (outside GAS iframe) and GAS_WEB_APP_URL is configured
-    if ((typeof google === 'undefined' || !google.script || !google.script.run) && GAS_WEB_APP_URL) {
-      function createGasRunner(successHandler, failureHandler) {
-        const callApi = (action, payload) => {
-          fetch(GAS_WEB_APP_URL, {
-            method: 'POST',
-            redirect: 'follow',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action, payload })
-          })
-            .then(r => r.json())
-            .then(res => { if (successHandler) successHandler(res); })
-            .catch(err => { if (failureHandler) failureHandler(err); });
-        };
-        return {
-          withSuccessHandler(fn) { return createGasRunner(fn, failureHandler); },
-          withFailureHandler(fn) { return createGasRunner(successHandler, fn); },
-          getInitialData() { callApi('getInitialData', {}); },
-          saveOrUpdateCase(data) { callApi('saveOrUpdateCase', data); },
-          saveAmbulanceChecklist(data) { callApi('saveAmbulanceChecklist', data); }
-        };
-      }
-      window.google = { script: { run: createGasRunner(null, null) } };
-    }
 
     let html5QrScannerInstance = null;
 
