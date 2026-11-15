@@ -6771,13 +6771,7 @@
       if (saved && saved.vehicleDesc) {
         vehInput.value = saved.vehicleDesc;
       } else {
-        let defaultDesc = (stationInfo && stationInfo.vehicleDesc) ? stationInfo.vehicleDesc : 'หน่วยกู้ชีพ/รถพยาบาลประจำจุด';
-        if (defaultDesc.includes('2 คัน')) {
-          defaultDesc = defaultDesc.replace('2 คัน', `คันที่ ${currentAmbCarIndex}`);
-        } else if (!defaultDesc.includes('คันที่')) {
-          defaultDesc = `${defaultDesc} (คันที่ ${currentAmbCarIndex})`;
-        }
-        vehInput.value = defaultDesc;
+        vehInput.value = '';
       }
     }
 
@@ -7178,10 +7172,10 @@
         // Car 1 evaluated, Car 2 not yet
         btnsHtml = `
           <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 1)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl border border-emerald-600 bg-white hover:bg-emerald-50 active:scale-[0.98] text-emerald-700 font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition" title="คลิกเพื่อแก้ไขข้อมูลการประเมินคันที่ 1">
-            <span>✏️ แก้ไข คันที่ 1</span>
+            <span>แก้ไข คันที่ 1</span>
           </button>
           <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 2)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition" title="ประเมินรถพยาบาลคันที่ 2 ประจำฐาน">
-            <span>➕ เพิ่มประเมินอีกคัน</span>
+            <span>เพิ่มประเมินอีกคัน</span>
           </button>
         `;
       } else if (!d1 && d2) {
@@ -7191,17 +7185,17 @@
             <span>Ambulance Check (คันที่ 1)</span>
           </button>
           <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 2)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl border border-purple-600 bg-white hover:bg-purple-50 active:scale-[0.98] text-purple-700 font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition" title="คลิกเพื่อแก้ไขข้อมูลการประเมินคันที่ 2">
-            <span>✏️ แก้ไข คันที่ 2</span>
+            <span>แก้ไข คันที่ 2</span>
           </button>
         `;
       } else {
         // Both evaluated: both editable
         btnsHtml = `
           <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 1)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl border border-emerald-600 bg-white hover:bg-emerald-50 active:scale-[0.98] text-emerald-700 font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition" title="คลิกเพื่อแก้ไขข้อมูลการประเมินคันที่ 1">
-            <span>✏️ แก้ไข คันที่ 1</span>
+            <span>แก้ไข คันที่ 1</span>
           </button>
           <button type="button" onclick="openAmbulanceChecklistModal('${stationId}', 2)" class="flex-1 touch-btn py-2 px-2.5 rounded-xl border border-purple-600 bg-white hover:bg-purple-50 active:scale-[0.98] text-purple-700 font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition" title="คลิกเพื่อแก้ไขข้อมูลการประเมินคันที่ 2">
-            <span>✏️ แก้ไข คันที่ 2</span>
+            <span>แก้ไข คันที่ 2</span>
           </button>
         `;
       }
