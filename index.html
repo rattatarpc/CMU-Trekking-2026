@@ -1503,11 +1503,11 @@
     // ==========================================
     // GITHUB PAGES / STANDALONE UNIVERSAL API BRIDGE
     // ==========================================
-    const CURRENT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbwPHta3PtNcJa01Dbcw0KU0XAu67sFUG-FDZtGatvXmYX31Oev4jvT_u3fIHMIv89co2w/exec';
+    const CURRENT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbxVc181-PqjPFYbsV1HFjKQZTck4eTEFH7IqV-krfz3ouNn0py7sP3DhL-YagwjP8FTzw/exec';
     
     // Auto-update legacy/cached URL in browser localStorage if outdated
     let savedApiUrl = localStorage.getItem('cmu_gas_api_url');
-    if (savedApiUrl && !savedApiUrl.includes('AKfycbwPHta3PtNcJa01Dbcw0KU0XAu67sFUG-FDZtGatvXmYX31Oev4jvT_u3fIHMIv89co2w')) {
+    if (savedApiUrl && !savedApiUrl.includes('AKfycbxVc181-PqjPFYbsV1HFjKQZTck4eTEFH7IqV-krfz3ouNn0py7sP3DhL-YagwjP8FTzw')) {
       localStorage.setItem('cmu_gas_api_url', CURRENT_DEPLOYMENT_URL);
       savedApiUrl = CURRENT_DEPLOYMENT_URL;
     }
@@ -7254,31 +7254,45 @@
       }
     });
 
-    const elTotal = document.getElementById('ambKpiTotalStations');
-    const elReady = document.getElementById('ambKpiReadyStations');
-    const elIssues = document.getElementById('ambKpiIssueStations');
-    const elPending = document.getElementById('ambKpiPendingStations');
+    // Update KPI Counters in Top Cards
+    const elKpiTotal = document.getElementById('kpiAmbTotalStations') || document.getElementById('ambKpiTotalStations');
+    const elKpiReady = document.getElementById('kpiAmbReadyStations') || document.getElementById('ambKpiReadyStations');
+    const elKpiIssues = document.getElementById('kpiAmbIssueStations') || document.getElementById('ambKpiIssueStations');
+    const elKpiPending = document.getElementById('kpiAmbPendingStations') || document.getElementById('ambKpiPendingStations');
 
-    if (elTotal) elTotal.textContent = totalAmbulancesCount;
-    if (elReady) elReady.textContent = readyCount;
-    if (elIssues) elIssues.textContent = issueCount;
-    if (elPending) elPending.textContent = pendingCount;
+    if (elKpiTotal) elKpiTotal.textContent = stations.length;
+    if (elKpiReady) elKpiReady.textContent = readyCount;
+    if (elKpiIssues) elKpiIssues.textContent = issueCount;
+    if (elKpiPending) elKpiPending.textContent = pendingCount;
 
-    const listContainer = document.getElementById('stationAmbulanceStatusList');
+    // Update Counts in Filter Pill Buttons
+    const elCntTotal = document.getElementById('cntAmbTotal');
+    const elCntReady = document.getElementById('cntAmbReady');
+    const elCntIssues = document.getElementById('cntAmbIssues');
+    const elCntPending = document.getElementById('cntAmbPending');
+
+    if (elCntTotal) elCntTotal.textContent = stations.length;
+    if (elCntReady) elCntReady.textContent = readyCount;
+    if (elCntIssues) elCntIssues.textContent = issueCount;
+    if (elCntPending) elCntPending.textContent = pendingCount;
+
+    // Primary Container in HTML is ambStatusCardsContainer (fallback stationAmbulanceStatusList)
+    const listContainer = document.getElementById('ambStatusCardsContainer') || document.getElementById('stationAmbulanceStatusList');
     if (!listContainer) return;
 
     let filtered = stationCardsData;
     if (currentAmbFilter === 'READY') {
-      filtered = stationCardsData.filter(x => x.c1Status === 'READY' || x.c2Status === 'READY');
+      filtered = stationCardsData.filter(x => x.category === 'READY' || x.c1Status === 'READY' || x.c2Status === 'READY');
     } else if (currentAmbFilter === 'ISSUES') {
-      filtered = stationCardsData.filter(x => x.c1Status === 'ISSUES' || x.c2Status === 'ISSUES');
+      filtered = stationCardsData.filter(x => x.category === 'ISSUES' || x.c1Status === 'ISSUES' || x.c2Status === 'ISSUES');
     } else if (currentAmbFilter === 'PENDING') {
-      filtered = stationCardsData.filter(x => x.c1Status === 'PENDING' || (x.hasTwo && x.c2Status === 'PENDING'));
+      filtered = stationCardsData.filter(x => x.category === 'PENDING' || x.c1Status === 'PENDING' || (x.hasTwo && x.c2Status === 'PENDING'));
     }
 
     if (filtered.length === 0) {
       listContainer.innerHTML = `
-        <div class="col-span-full py-12 text-center text-slate-400">
+        <div class="py-12 text-center text-slate-400">
+          <svg class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           <p class="text-sm font-semibold">No ambulance records found for this filter.</p>
         </div>
       `;
@@ -7289,17 +7303,18 @@
     filtered.forEach(item => {
       const st = item.station;
       const stName = item.stationInfo ? item.stationInfo.name : st.name;
+      const stNumber = st.id.replace('st', '');
 
-      function renderCarSubCard(carIdx, data, status) {
+      function renderCarSubCard(carIdx, data, status, stId) {
         const isReady = (status === 'READY');
         const isIssues = (status === 'ISSUES');
         const isPending = (status === 'PENDING');
 
         const badgeHtml = isReady
-          ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Ready to use</span>'
+          ? '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Ready to use</span>'
           : (isIssues
-            ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Needs Attention</span>'
-            : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Pending Inspection</span>');
+            ? '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Needs Attention</span>'
+            : '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Pending Inspection</span>');
 
         const carVehName = data && data.vehicleDesc ? data.vehicleDesc : item.vehDesc;
         const inspector = data && data.inspectorName ? data.inspectorName : '-';
@@ -7309,9 +7324,12 @@
         let defectHtml = '';
         if (data && data.issues && data.issues.length > 0) {
           defectHtml = `
-            <div class="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-900">
-              <span class="font-bold">อุปกรณ์ที่ต้องติดตาม (${data.issues.length} รายการ):</span>
-              <ul class="list-disc list-inside mt-0.5 text-slate-700 space-y-0.5">
+            <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+              <span class="font-bold flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span>อุปกรณ์ที่ต้องติดตาม (${data.issues.length} รายการ):</span>
+              </span>
+              <ul class="list-disc list-inside text-slate-700 pl-1 space-y-0.5">
                 ${data.issues.slice(0, 3).map(iss => `<li>${iss}</li>`).join('')}
                 ${data.issues.length > 3 ? `<li class="font-semibold text-amber-800">...และอีก ${data.issues.length - 3} รายการ</li>` : ''}
               </ul>
@@ -7322,37 +7340,40 @@
         let unreadyNotesHtml = '';
         if (unreadyNotes) {
           unreadyNotesHtml = `
-            <div class="mt-2 p-2 bg-rose-50 rounded-lg border border-rose-200 text-[11px] text-rose-900">
-              <span class="font-bold">รายงานอุปกรณ์ไม่พร้อมใช้งานเพิ่มเติม:</span>
-              <p class="text-slate-800 mt-0.5">${unreadyNotes}</p>
+            <div class="p-2.5 bg-rose-50 rounded-xl border border-rose-200 text-xs text-rose-900 space-y-0.5">
+              <span class="font-bold flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span>รายงานอุปกรณ์ไม่พร้อมใช้งานเพิ่มเติม:</span>
+              </span>
+              <p class="text-slate-800 font-medium pl-1">${unreadyNotes}</p>
             </div>
           `;
         }
 
         return `
-          <div class="p-3 rounded-xl border border-slate-200/90 bg-white/80 space-y-2">
-            <div class="flex items-center justify-between gap-2">
+          <div class="p-3.5 rounded-xl border border-slate-200 bg-white space-y-2.5 shadow-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-900">คันที่ ${carIdx}</span>
-                <span class="text-xs font-bold text-slate-800 truncate">${carVehName}</span>
+                <span class="text-xs font-bold text-slate-800 break-words">${carVehName}</span>
               </div>
               <div>${badgeHtml}</div>
             </div>
 
-            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600 pt-1 border-t border-slate-100">
-              <div><span class="text-slate-400">Inspector:</span> <strong class="text-slate-700">${inspector}</strong></div>
-              <div><span class="text-slate-400">Time:</span> <strong class="text-slate-700">${time}</strong></div>
+            <div class="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-1.5 border-t border-slate-100">
+              <div><span class="text-slate-400">Inspector:</span> <strong class="text-slate-800">${inspector}</strong></div>
+              <div><span class="text-slate-400">Time:</span> <strong class="text-slate-800">${time}</strong></div>
             </div>
 
             ${defectHtml}
             ${unreadyNotesHtml}
 
             <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-              <button type="button" onclick="openAmbulanceChecklistModal('${st.id}', ${carIdx})" class="touch-btn px-3 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs transition">
+              <button type="button" onclick="openAmbulanceChecklistModal('${stId}', ${carIdx})" class="touch-btn px-3.5 py-1.5 rounded-xl bg-cmu-purple hover:bg-purple-800 text-white font-bold text-xs transition shadow-xs active:scale-95">
                 Checklist
               </button>
               ${data ? `
-                <button type="button" onclick="generateAmbulancePDFReport('${st.id}', ${carIdx})" class="touch-btn px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+                <button type="button" onclick="generateAmbulancePDFReport('${stId}', ${carIdx})" class="touch-btn px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition border border-slate-200 active:scale-95">
                   PDF
                 </button>
               ` : ''}
@@ -7362,20 +7383,20 @@
       }
 
       cardsHtml += `
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3.5 hover:shadow-md transition">
-          <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
-            <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-black text-xs">
-                ${st.id.replace('st', '')}
+        <div class="p-4 sm:p-5 hover:bg-slate-50/60 transition space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                ${stNumber}
               </div>
-              <h3 class="font-bold text-slate-800 text-sm sm:text-base font-thai">${stName}</h3>
+              <h4 class="font-bold text-slate-900 text-sm sm:text-base font-thai">${stName}</h4>
+              ${item.hasTwo ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">2 Units</span>' : ''}
             </div>
-            ${item.hasTwo ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">2 Units</span>' : ''}
           </div>
 
           <div class="space-y-3">
-            ${renderCarSubCard(1, item.d1, item.c1Status)}
-            ${item.hasTwo ? renderCarSubCard(2, item.d2, item.c2Status) : ''}
+            ${renderCarSubCard(1, item.d1, item.c1Status, st.id)}
+            ${item.hasTwo ? renderCarSubCard(2, item.d2, item.c2Status, st.id) : ''}
           </div>
         </div>
       `;
@@ -7384,27 +7405,31 @@
     listContainer.innerHTML = cardsHtml;
   }
 
-  function filterAmbulanceDashboard(filter) {
+  function filterAmbulanceStatusView(filter) {
     currentAmbFilter = filter;
-    const btnAll = document.getElementById('filterAmbAll');
-    const btnReady = document.getElementById('filterAmbReady');
-    const btnIssues = document.getElementById('filterAmbIssues');
-    const btnPending = document.getElementById('filterAmbPending');
+    const btnAll = document.getElementById('fltAmb-ALL') || document.getElementById('filterAmbAll');
+    const btnReady = document.getElementById('fltAmb-READY') || document.getElementById('filterAmbReady');
+    const btnIssues = document.getElementById('fltAmb-ISSUES') || document.getElementById('filterAmbIssues');
+    const btnPending = document.getElementById('fltAmb-PENDING') || document.getElementById('filterAmbPending');
 
     [btnAll, btnReady, btnIssues, btnPending].forEach(b => {
       if (b) {
-        b.className = 'touch-btn px-3 sm:px-4 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:bg-slate-100';
+        b.className = 'px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-800 transition font-semibold';
       }
     });
 
-    const activeCls = 'touch-btn px-3 sm:px-4 py-1.5 rounded-xl text-xs font-bold transition bg-white text-purple-900 shadow-sm border border-slate-200/80';
+    const activeCls = 'px-3.5 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm font-bold transition';
     if (filter === 'ALL' && btnAll) btnAll.className = activeCls;
-    if (filter === 'READY' && btnReady) btnReady.className = activeCls;
-    if (filter === 'ISSUES' && btnIssues) btnIssues.className = activeCls;
+    if (filter === 'READY' && btnReady) btnReady.className = activeCls + ' text-emerald-700';
+    if (filter === 'ISSUES' && btnIssues) btnIssues.className = activeCls + ' text-amber-700';
     if (filter === 'PENDING' && btnPending) btnPending.className = activeCls;
 
     renderAmbulanceStatusDashboard();
   }
+
+  // Support both function names for seamless backward compatibility
+  window.filterAmbulanceDashboard = filterAmbulanceStatusView;
+  window.filterAmbulanceStatusView = filterAmbulanceStatusView;
 
   function buildAmbulanceReportHtml(specificStationId, specificCarIndex) {
     const stationId = specificStationId || currentAmbStationId || (document.getElementById('ambStationSelect') ? document.getElementById('ambStationSelect').value : 'st1');
