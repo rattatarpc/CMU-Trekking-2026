@@ -439,17 +439,18 @@ Check your Browserslist config to be sure that your targets are set up correctly
           </ul>
         </div>
 
-        <!-- Step 5: Ambulance Pre-Duty Check & PDF Report -->
+        <!-- Step 5: Ambulance Pre-Duty Check & Multi-Car Evaluation -->
         <div class="border border-emerald-200 rounded-xl p-3 bg-white">
           <div class="font-en font-bold text-emerald-800 text-xs mb-1 flex items-center justify-between border-b border-emerald-100 pb-1">
-            <span>5. Ambulance Pre-Duty Checklist & PDF</span>
+            <span>5. Ambulance Pre-Duty Check (2 Cars & Unready Notes)</span>
             <span class="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded font-normal">Pre-Duty</span>
           </div>
           <ul class="text-slate-600 space-y-1 list-disc list-inside">
-            <li><b>71 Standard Items across 7 Categories:</b> Rescue, Airway, Trauma, Immobilization, Diagnostics, IV/Meds, and Vehicle accessories.</li>
-            <li><b>Station 9 Special LUCAS CPR:</b> Station 9 (เชิงพระธาตุ) features item 72: <i>Lucas เครื่องปั๊มหัวใจอัตโนมัติ</i>.</li>
-            <li><b>3-State Assessment:</b> Ready to use, Not Ready to use, or No equipment (no pre-fill to ensure authentic checks).</li>
-            <li><b>Dual Output:</b> Saves to Google Sheets (<code>Ambulance_Checklist</code>) and downloads formal black-and-white PDF report with inspector signature.</li>
+            <li><b>Multi-Car Support:</b> Stations with 2 ambulances (St. 8, 9, 10, 11) toggle <code>[Car 1]</code> and <code>[Car 2]</code> to evaluate each vehicle separately.</li>
+            <li><b>Editable Vehicle Name:</b> Staff can freely type or update vehicle name, callsign, and license plate.</li>
+            <li><b>Unready Equipment Custom Notes:</b> Dedicated report field for typing defective items, low batteries, or supply replenishment requests.</li>
+            <li><b>Station 9 LUCAS CPR (72 Items):</b> Automatic chest compression device exclusively configured for Station 9.</li>
+            <li><b>Printable PDF:</b> Generates A4 medical table report with unready defects section and inspector signature.</li>
           </ul>
         </div>
 
@@ -461,9 +462,9 @@ Check your Browserslist config to be sure that your targets are set up correctly
           </div>
           <ul class="text-slate-600 space-y-1 list-disc list-inside">
             <li><b>Navigation:</b> Switch header dropdown from Command Center to <b>Ambulance Status</b>.</li>
-            <li><b>4 Global KPIs:</b> Total Stations (11), Ready for Duty, Needs Attention, Pending Inspection.</li>
-            <li><b>Defect Alert Chips:</b> Stations with issues display yellow highlight and specific missing/broken items.</li>
-            <li><b>Live Drilldown:</b> Tap "Checklist" button on any station to view full itemized checklist in real-time.</li>
+            <li><b>Multi-Ambulance Cards:</b> Shows Car 1 and Car 2 statuses independently for stations with 2 vehicles.</li>
+            <li><b>Defect Alert Chips & Notes:</b> Displays real-time defect tags and custom unready notes reported by station inspectors.</li>
+            <li><b>Individual Car Checklist:</b> Inspect and download PDF for Car 1 or Car 2 on demand.</li>
           </ul>
         </div>
 

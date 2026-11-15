@@ -872,8 +872,8 @@
                 <input type="text" id="field_Faculty" autocomplete="off" list="faculty_datalist"
                        placeholder=""
                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-cmu-purple focus:outline-none pr-9 cursor-pointer"
-                       onclick="toggleFacultyDropdown(true)"
-                       oninput="filterFacultyOptions(this.value); toggleFacultyDropdown(true);"
+                       onclick="toggleFacultyDropdown(true); this.select();"
+                       oninput="filterFacultyOptions(this.value)"
                        onfocus="toggleFacultyDropdown(true)">
                 <button type="button" onclick="toggleFacultyDropdown()" class="absolute inset-y-0 right-0 px-2.5 flex items-center text-slate-400 hover:text-cmu-purple">
                   <svg class="w-4 h-4 transition-transform duration-200" id="facultyChevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -946,6 +946,42 @@
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">Emergency Contact Phone</label>
               <input type="tel" id="field_Emergency_Contact" placeholder="" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-cmu-purple focus:outline-none">
+            </div>
+          </div>
+
+          <!-- High Risk Tag Check (Yes / No) & Reason (Optional) -->
+          <div class="pt-2.5 border-t border-slate-100">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-start">
+              <div class="sm:col-span-5 md:col-span-4">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                  <span>ผู้ป่วยมีป้าย High Risk หรือไม่</span>
+                  <span class="text-[10px] text-slate-400 font-normal">(ไม่บังคับ)</span>
+                </label>
+                <div class="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 gap-1 w-full sm:w-auto">
+                  <label class="flex-1 sm:flex-initial cursor-pointer select-none">
+                    <input type="radio" name="field_High_Risk" id="field_High_Risk_No" value="No" checked onchange="toggleHighRiskReason(this.value)" class="sr-only peer">
+                    <span class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 block text-center transition peer-checked:bg-white peer-checked:text-slate-800 peer-checked:shadow-xs">
+                      No (ไม่มี)
+                    </span>
+                  </label>
+                  <label class="flex-1 sm:flex-initial cursor-pointer select-none">
+                    <input type="radio" name="field_High_Risk" id="field_High_Risk_Yes" value="Yes" onchange="toggleHighRiskReason(this.value)" class="sr-only peer">
+                    <span class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 block text-center transition peer-checked:bg-rose-500 peer-checked:text-white peer-checked:shadow-xs">
+                      Yes (มีป้าย)
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- High Risk Reason Container (Visible when Yes) -->
+              <div id="highRiskReasonContainer" class="hidden sm:col-span-7 md:col-span-8 transition-all">
+                <label class="block text-xs font-bold text-rose-700 mb-1 flex items-center gap-1">
+                  <span>ระบุสาเหตุ High Risk</span>
+                  <span class="text-[10px] text-slate-400 font-normal">(ไม่บังคับ)</span>
+                </label>
+                <input type="text" id="field_High_Risk_Reason" placeholder="ระบุสาเหตุ เช่น โรคหัวใจ, โรคหอบหืดรุนแรง, ประวัติเคยหมดสติ..." class="w-full bg-rose-50/50 border border-rose-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-rose-400 focus:outline-none">
+              </div>
             </div>
           </div>
         </div>
@@ -1742,7 +1778,10 @@
       'cmdSlot2Type',
       'cmdSlot1Filter',
       'cmdSlot2Filter',
-      'cmdFilterTriage'
+      'cmdFilterTriage',
+      'field_Patient_Type',
+      'field_Gender',
+      'field_Year_Level'
     ];
 
     // ==========================================
@@ -1753,20 +1792,30 @@
     function renderFacultyOptions(filterText = '') {
       const listEl = document.getElementById('facultyDropdownList');
       if (!listEl) return;
+      const currentVal = (document.getElementById('field_Faculty')?.value || '').trim();
       const q = (filterText || '').trim().toLowerCase();
-      const matched = FACULTY_LIST.filter(f => f.toLowerCase().includes(q));
+      // If no filterText or matching empty, show ALL 22 faculties
+      const matched = FACULTY_LIST.filter(f => !q || f.toLowerCase().includes(q));
 
       if (matched.length === 0) {
         listEl.innerHTML = '<div class="px-3 py-2 text-xs text-slate-400 italic text-center">ไม่พบคณะที่ค้นหา</div>';
         return;
       }
 
-      listEl.innerHTML = matched.map(f => `
-        <div onclick="selectFaculty('${f}')" 
-             class="px-3 py-2 text-xs sm:text-sm text-slate-700 hover:bg-purple-50 hover:text-cmu-purple rounded-xl cursor-pointer transition font-medium">
-          ${f}
-        </div>
-      `).join('');
+      listEl.innerHTML = matched.map(f => {
+        const isSelected = (f === currentVal);
+        return `
+          <div onclick="selectFaculty('${f}')" 
+               class="px-3.5 py-2.5 text-xs sm:text-sm font-medium transition cursor-pointer flex items-center justify-between rounded-xl ${
+                 isSelected 
+                   ? 'bg-cmu-purple text-white font-bold shadow-xs' 
+                   : 'text-slate-700 hover:bg-purple-50 hover:text-cmu-purple'
+               }">
+            <span class="truncate">${f}</span>
+            ${isSelected ? '<svg class="w-4 h-4 text-white shrink-0 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>' : ''}
+          </div>
+        `;
+      }).join('');
     }
 
     function toggleFacultyDropdown(forceOpen) {
@@ -1777,12 +1826,28 @@
       const shouldOpen = (forceOpen !== undefined) ? forceOpen : !isOpen;
 
       if (shouldOpen) {
-        renderFacultyOptions(document.getElementById('field_Faculty')?.value || '');
+        // ALWAYS render full 22 faculties on open so user does not need to backspace/erase
+        renderFacultyOptions('');
         listEl.classList.remove('hidden');
         if (chevron) chevron.classList.add('rotate-180');
       } else {
         listEl.classList.add('hidden');
         if (chevron) chevron.classList.remove('rotate-180');
+      }
+    }
+
+    function toggleHighRiskReason(val) {
+      const isYes = (val === 'Yes');
+      const cont = document.getElementById('highRiskReasonContainer');
+      const reasonInput = document.getElementById('field_High_Risk_Reason');
+      if (cont) {
+        if (isYes) {
+          cont.classList.remove('hidden');
+          if (reasonInput) reasonInput.focus();
+        } else {
+          cont.classList.add('hidden');
+          if (reasonInput) reasonInput.value = '';
+        }
       }
     }
 
@@ -1858,16 +1923,18 @@
 
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `custom-select-trigger w-full rounded-2xl border text-left flex items-center justify-between gap-1.5 transition select-none focus:outline-none focus:ring-2 focus:ring-cmu-purple/30 ${
-          isCompact 
-            ? 'px-2.5 py-1.5 text-xs font-semibold ' 
-            : 'px-3.5 py-2.5 text-xs sm:text-sm font-medium '
-        } ${
-          isSlotType
-            ? 'bg-purple-50/80 text-cmu-purple border-purple-200 hover:bg-purple-100/70 shadow-sm'
-            : (isSlotFilter 
-                ? 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm' 
-                : (isFilterTriage ? 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm' : 'bg-slate-50 text-slate-800 border-slate-300 hover:bg-slate-100/70 shadow-sm'))
+        const isFormSelect = (selectId === 'field_Patient_Type' || selectId === 'field_Gender' || selectId === 'field_Year_Level');
+        btn.className = `custom-select-trigger w-full border text-left flex items-center justify-between gap-1.5 transition select-none focus:outline-none focus:ring-2 focus:ring-cmu-purple ${
+          isFormSelect
+            ? 'rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-800 border-slate-300 hover:bg-slate-100/70 shadow-2xs font-medium cursor-pointer'
+            : (isCompact 
+                ? 'rounded-2xl px-2.5 py-1.5 text-xs font-semibold ' 
+                : 'rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm font-medium ') +
+              (isSlotType
+                ? 'bg-purple-50/80 text-cmu-purple border-purple-200 hover:bg-purple-100/70 shadow-sm'
+                : (isSlotFilter 
+                    ? 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm' 
+                    : (isFilterTriage ? 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm' : 'bg-slate-50 text-slate-800 border-slate-300 hover:bg-slate-100/70 shadow-sm')))
         } ${options.btnClass || ''}`;
 
         btn.onclick = (e) => {
@@ -1919,8 +1986,16 @@
       }
 
       const selectedOpt = sel.options[sel.selectedIndex] || sel.options[0];
+      const isPlaceholder = (!selectedOpt || !selectedOpt.value || selectedOpt.value === '');
       if (labelSpan) {
         labelSpan.textContent = selectedOpt ? selectedOpt.text : '-- Select --';
+        if (isPlaceholder) {
+          labelSpan.classList.add('text-slate-400');
+          labelSpan.classList.remove('text-slate-800');
+        } else {
+          labelSpan.classList.remove('text-slate-400');
+          labelSpan.classList.add('text-slate-800');
+        }
       }
 
       let menuHtml = '';
@@ -1951,6 +2026,9 @@
 
       sel.selectedIndex = idx;
       sel.dispatchEvent(new Event('change', { bubbles: true }));
+      if (selectId === 'field_Patient_Type' && typeof handlePatientTypeChange === 'function') {
+        handlePatientTypeChange(sel.value);
+      }
       if (selectId === 'field_Transfer_Hospital' && typeof handleTransferHospitalChange === 'function') {
         handleTransferHospitalChange(sel.value);
       }
@@ -5247,6 +5325,9 @@
       const otherInput = document.getElementById('field_Transfer_Hospital_Other');
       if (otherInput) otherInput.value = '';
       syncMgmtChips();
+      const hrNo = document.getElementById('field_High_Risk_No');
+      if (hrNo) hrNo.checked = true;
+      toggleHighRiskReason('No');
       document.getElementById('formHeaderTitle').textContent = 'Add New Case';
       document.getElementById('formCaseIdBadge').textContent = 'New';
       document.getElementById('submitBtnText').textContent = 'Save Case';
@@ -5358,6 +5439,20 @@
       document.getElementById('field_Underlying_Disease').value = c.Underlying_Disease || '';
       if (document.getElementById('field_Allergy')) document.getElementById('field_Allergy').value = c.Allergy || '';
       document.getElementById('field_Emergency_Contact').value = c.Emergency_Contact || '';
+      
+      const isHighRiskCase = (c.High_Risk === 'Yes' || c.High_Risk === 'YES' || c.High_Risk === 'true' || c.High_Risk === true);
+      if (isHighRiskCase) {
+        const hrYes = document.getElementById('field_High_Risk_Yes');
+        if (hrYes) hrYes.checked = true;
+        toggleHighRiskReason('Yes');
+        if (document.getElementById('field_High_Risk_Reason')) {
+          document.getElementById('field_High_Risk_Reason').value = c.High_Risk_Reason || '';
+        }
+      } else {
+        const hrNo = document.getElementById('field_High_Risk_No');
+        if (hrNo) hrNo.checked = true;
+        toggleHighRiskReason('No');
+      }
 
       // Vital Signs
       document.getElementById('field_Present_Illness').value = c.Present_Illness || '';
@@ -5558,10 +5653,21 @@
           el.classList.remove('border-slate-300', 'bg-slate-50');
           el.classList.add('border-red-500', 'bg-red-50/70', 'ring-2', 'ring-red-400');
 
+          const customWrapper = el.nextElementSibling?.classList.contains('custom-select-wrapper') ? el.nextElementSibling : null;
+          const customTrigger = customWrapper?.querySelector('.custom-select-trigger');
+          if (customTrigger) {
+            customTrigger.classList.remove('border-slate-300', 'bg-slate-50');
+            customTrigger.classList.add('border-red-500', 'bg-red-50/70', 'ring-2', 'ring-red-400');
+          }
+
           // Remove red highlight as soon as user types or selects
           const removeHighlight = () => {
             el.classList.remove('border-red-500', 'bg-red-50/70', 'ring-2', 'ring-red-400');
             el.classList.add('border-slate-300', 'bg-slate-50');
+            if (customTrigger) {
+              customTrigger.classList.remove('border-red-500', 'bg-red-50/70', 'ring-2', 'ring-red-400');
+              customTrigger.classList.add('border-slate-300', 'bg-slate-50');
+            }
           };
           el.addEventListener('input', removeHighlight, { once: true });
           el.addEventListener('change', removeHighlight, { once: true });
@@ -5662,6 +5768,8 @@
         Underlying_Disease: document.getElementById('field_Underlying_Disease') ? document.getElementById('field_Underlying_Disease').value.trim() : '',
         Allergy: document.getElementById('field_Allergy') ? document.getElementById('field_Allergy').value.trim() : '',
         Emergency_Contact: document.getElementById('field_Emergency_Contact') ? document.getElementById('field_Emergency_Contact').value.trim() : '',
+        High_Risk: document.querySelector('input[name="field_High_Risk"]:checked')?.value || 'No',
+        High_Risk_Reason: document.getElementById('field_High_Risk_Reason') ? document.getElementById('field_High_Risk_Reason').value.trim() : '',
         Triage_Level: '',
 
         Present_Illness: document.getElementById('field_Present_Illness') ? document.getElementById('field_Present_Illness').value.trim() : '',
@@ -5803,13 +5911,22 @@
             ${c.Age && c.Age !== '-' ? `<span><b>Age:</b> ${c.Age} ปี</span>` : ''}
             ${c.Gender && c.Gender !== '-' ? `<span><b>Gender:</b> ${c.Gender}</span>` : ''}
           </div>
-          ${c.Underlying_Disease ? `<div class="text-xs text-red-600 mt-1"><b>Underlying Disease:</b> ${c.Underlying_Disease}</div>` : ''}
-          ${c.Allergy ? `<div class="text-xs text-red-600 mt-0.5"><b>Allergy:</b> ${c.Allergy}</div>` : ''}
+          ${c.Underlying_Disease ? `<div class="text-xs text-slate-700 mt-1"><b>Underlying Disease:</b> ${c.Underlying_Disease}</div>` : ''}
+          ${c.Allergy ? `<div class="text-xs text-rose-600 mt-0.5"><b>Allergy:</b> ${c.Allergy}</div>` : ''}
           ${c.Emergency_Contact ? `
             <div class="text-xs flex items-center gap-2 mt-1">
               <span><b>Emergency Tel:</b> ${c.Emergency_Contact}</span>
               <a href="tel:${c.Emergency_Contact}" class="bg-emerald-600 text-white text-[10px] px-2.5 py-0.5 rounded-lg font-bold hover:bg-emerald-700 shadow-sm transition active:scale-95">Call</a>
               <button type="button" onclick="copyToClipboard('${c.Emergency_Contact}', 'Copied Emergency Phone!')" class="text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 text-[10px] px-2 py-0.5 rounded-lg font-semibold transition active:scale-95" title="Copy Tel">Copy</button>
+            </div>
+          ` : ''}
+          ${(c.High_Risk === 'Yes' || c.High_Risk === 'YES') ? `
+            <div class="mt-2.5 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs">
+              <div class="flex items-center gap-1.5 font-bold text-rose-800">
+                <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                <span>ผู้ป่วยมีป้าย High Risk</span>
+              </div>
+              ${c.High_Risk_Reason ? `<p class="text-rose-700 mt-1 pl-3.5 font-medium"><b>สาเหตุ:</b> ${c.High_Risk_Reason}</p>` : ''}
             </div>
           ` : ''}
         </div>

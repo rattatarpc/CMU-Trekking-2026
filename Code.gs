@@ -58,7 +58,9 @@ const HEADERS = [
   'Photo_URL',        // AH
   'Minor_Count',      // AI
   'Progression_Note', // AJ
-  'Allergy'           // AK
+  'Allergy',          // AK
+  'High_Risk',        // AL
+  'High_Risk_Reason'  // AM
 ];
 
 /**
@@ -479,6 +481,7 @@ const AMBULANCE_HEADERS = [
   'Checklist_ID',
   'Timestamp',
   'Station',
+  'Vehicle_No',
   'Vehicle',
   'Inspector',
   'Overall_Status',
@@ -487,6 +490,7 @@ const AMBULANCE_HEADERS = [
   'Not_Ready_Count',
   'No_Equipment_Count',
   'Defects_Summary',
+  'Unready_Notes',
   'Items_Checklist_Data'
 ];
 
@@ -555,10 +559,12 @@ function saveAmbulanceChecklist(data) {
       sheet = ss.getSheetByName(AMBULANCE_SHEET_NAME);
     }
 
+    const carNoStr = data.carIndex ? ('คันที่ ' + data.carIndex) : 'คันที่ 1';
     const row = [
       id,
       timestampStr,
       data.stationName || data.stationId || '',
+      carNoStr,
       data.vehicleDesc || '',
       data.inspectorName || '',
       data.overallStatus || 'พร้อมใช้งาน',
@@ -567,7 +573,8 @@ function saveAmbulanceChecklist(data) {
       data.summaryNotReady || 0,
       data.summaryNoEquipment || 0,
       data.defectsSummary || '-',
-      JSON.stringify(data.itemsData || [])
+      data.unreadyNotes || '-',
+      JSON.stringify(data.itemsData || data.items || [])
     ];
 
     sheet.appendRow(row);
