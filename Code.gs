@@ -227,15 +227,21 @@ function getInitialData() {
       const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
       const ambSheet = ss.getSheetByName(AMBULANCE_SHEET_NAME);
       if (ambSheet && ambSheet.getLastRow() > 1) {
-        const ambData = ambSheet.getRange(2, 1, ambSheet.getLastRow() - 1, AMBULANCE_HEADERS.length).getValues();
+        const lastCol = Math.max(ambSheet.getLastColumn(), 1);
+        const ambData = ambSheet.getRange(2, 1, ambSheet.getLastRow() - 1, lastCol).getValues();
         for (let i = 0; i < ambData.length; i++) {
           const r = ambData[i];
           const stRaw = formatCell(r[2]);
           let matchedStId = '';
-          for (let s = 0; s < STATIONS.length; s++) {
-            if (STATIONS[s].name === stRaw || STATIONS[s].id === stRaw || stRaw.includes(STATIONS[s].name)) {
-              matchedStId = STATIONS[s].id;
-              break;
+          const numMatch = stRaw.match(/(?:Station|ฐาน|st)\s*(\d+)/i) || stRaw.match(/(\d+)/);
+          if (numMatch) {
+            matchedStId = 'st' + parseInt(numMatch[1], 10);
+          } else {
+            for (let s = 0; s < STATIONS.length; s++) {
+              if (STATIONS[s].name === stRaw || STATIONS[s].id === stRaw || stRaw.includes(STATIONS[s].name) || STATIONS[s].name.includes(stRaw)) {
+                matchedStId = STATIONS[s].id;
+                break;
+              }
             }
           }
           if (!matchedStId) matchedStId = stRaw;
@@ -246,9 +252,18 @@ function getInitialData() {
           if (carMatch) carIdx = parseInt(carMatch[0], 10);
 
           let itemsObj = {};
-          try {
-            itemsObj = JSON.parse(r[13]);
-          } catch(e) {}
+          // Search row columns from right to left for the checklist JSON (handles all schema variations)
+          for (let c = r.length - 1; c >= 0; c--) {
+            const cellVal = String(r[c] || '').trim();
+            if ((cellVal.startsWith('{') || cellVal.startsWith('[')) && (cellVal.includes('AC-') || cellVal.includes('status') || cellVal.includes('actualQty'))) {
+              try {
+                itemsObj = JSON.parse(cellVal);
+                if (typeof itemsObj === 'object' && Object.keys(itemsObj).length > 0) {
+                  break;
+                }
+              } catch(e) {}
+            }
+          }
 
           const timeFormatted = formatTimeOnly(r[1]);
           const defectsStr = formatCell(r[11]);
@@ -277,8 +292,11 @@ function getInitialData() {
           };
 
           ambulanceChecklists[matchedStId + '_car' + carIdx] = chkObj;
+          ambulanceChecklists[matchedStId + '_car_' + carIdx] = chkObj;
+          ambulanceChecklists[stRaw + '_car' + carIdx] = chkObj;
           if (carIdx === 1 || !ambulanceChecklists[matchedStId]) {
             ambulanceChecklists[matchedStId] = chkObj;
+            ambulanceChecklists[stRaw] = chkObj;
           }
         }
       }
@@ -595,6 +613,14 @@ function saveAmbulanceChecklist(data) {
     if (!sheet) {
       setupAmbulanceChecklistSheet();
       sheet = ss.getSheetByName(AMBULANCE_SHEET_NAME);
+    }
+
+    if (sheet.getMaxColumns() < AMBULANCE_HEADERS.length) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), AMBULANCE_HEADERS.length - sheet.getMaxColumns());
+    }
+    // ตรวจสอบว่าหัวตารางครบ 14 คอลัมน์หรือไม่
+    if (sheet.getLastColumn() < AMBULANCE_HEADERS.length) {
+      sheet.getRange(1, 1, 1, AMBULANCE_HEADERS.length).setValues([AMBULANCE_HEADERS]);
     }
 
     const carIdxVal = data.carIndex || data.vehicleNo || 1;
