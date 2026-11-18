@@ -1503,11 +1503,11 @@
     // ==========================================
     // GITHUB PAGES / STANDALONE UNIVERSAL API BRIDGE
     // ==========================================
-    const CURRENT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbxVc181-PqjPFYbsV1HFjKQZTck4eTEFH7IqV-krfz3ouNn0py7sP3DhL-YagwjP8FTzw/exec';
+    const CURRENT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbwUANrhXtpB84EcmH14d-xQm4flTjDutq-QXtVdBGQ8G6l5qbjp6-e5Hhk7rqFrDWHChA/exec';
     
     // Auto-update legacy/cached URL in browser localStorage if outdated
     let savedApiUrl = localStorage.getItem('cmu_gas_api_url');
-    if (savedApiUrl && !savedApiUrl.includes('AKfycbxVc181-PqjPFYbsV1HFjKQZTck4eTEFH7IqV-krfz3ouNn0py7sP3DhL-YagwjP8FTzw')) {
+    if (savedApiUrl && !savedApiUrl.includes('AKfycbwUANrhXtpB84EcmH14d-xQm4flTjDutq-QXtVdBGQ8G6l5qbjp6-e5Hhk7rqFrDWHChA')) {
       localStorage.setItem('cmu_gas_api_url', CURRENT_DEPLOYMENT_URL);
       savedApiUrl = CURRENT_DEPLOYMENT_URL;
     }
