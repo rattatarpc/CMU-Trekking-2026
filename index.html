@@ -6376,21 +6376,16 @@
           </span>
         </div>
 
-        <!-- Issues and Notes Alerts -->
-        <div id="ambViewIssuesBox" class="mt-3 hidden p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
-          <span class="font-bold flex items-center gap-1.5">
-            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            <span>รายการอุปกรณ์ที่ต้องติดตาม (<span id="ambViewIssuesCount">0</span> รายการ):</span>
+        <!-- Combined Unready Equipment Alert Box -->
+        <div id="ambViewUnreadyBox" class="mt-3 hidden p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-950 space-y-1.5 shadow-xs">
+          <span class="font-bold flex items-center gap-1.5 text-amber-900">
+            <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span>อุปกรณ์ที่ไม่พร้อมใช้งาน / ชำรุด / ไม่มี:</span>
           </span>
-          <ul id="ambViewIssuesList" class="list-disc list-inside text-slate-700 pl-1 space-y-0.5"></ul>
-        </div>
-
-        <div id="ambViewUnreadyNotesBox" class="mt-2.5 hidden p-3 bg-rose-50 rounded-xl border border-rose-200 text-xs text-rose-900 space-y-0.5">
-          <span class="font-bold flex items-center gap-1.5">
-            <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            <span>รายงานอุปกรณ์ไม่พร้อมใช้งาน / ชำรุด / ไม่มี (ระบุเพิ่มเติม):</span>
-          </span>
-          <p id="ambViewUnreadyNotesText" class="text-slate-800 font-medium pl-1 break-words"></p>
+          <ul id="ambViewIssuesList" class="list-disc list-inside text-slate-800 pl-1 space-y-0.5 font-medium"></ul>
+          <div id="ambViewUnreadyNotesContainer" class="hidden pt-1 text-slate-700 font-normal pl-1 border-t border-amber-200/60">
+            <span class="font-semibold text-amber-900">ระบุเพิ่มเติม:</span> <span id="ambViewUnreadyNotesText"></span>
+          </div>
         </div>
       </div>
 
@@ -7554,36 +7549,35 @@
             ? '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Needs Attention</span>'
             : '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Pending Inspection</span>');
 
-        const carVehName = data && data.vehicleDesc ? data.vehicleDesc : item.vehDesc;
+        const carVehName = (data && data.vehicleDesc && data.vehicleDesc.trim() && data.vehicleDesc !== '-' && !data.vehicleDesc.startsWith('คันที่')) ? data.vehicleDesc.trim() : '';
         const inspector = (data && data.inspectorName && !data.inspectorName.includes('หน่วยยานพาหนะ') && !data.inspectorName.includes('รถพยาบาล') && !data.inspectorName.includes('คัน')) ? data.inspectorName : (data && data.inspectorName ? data.inspectorName : '-');
         const time = formatDisplayTime(data ? (data.evalTime || data.completedAt || data.timestamp) : '-');
-        const unreadyNotes = data && data.unreadyNotes ? data.unreadyNotes : '';
 
-        let defectHtml = '';
-        if (data && data.issues && data.issues.length > 0) {
-          defectHtml = `
-            <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
-              <span class="font-bold flex items-center gap-1">
-                <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                <span>อุปกรณ์ที่ต้องติดตาม (${data.issues.length} รายการ):</span>
-              </span>
-              <ul class="list-disc list-inside text-slate-700 pl-1 space-y-0.5">
-                ${data.issues.slice(0, 3).map(iss => `<li>${iss}</li>`).join('')}
-                ${data.issues.length > 3 ? `<li class="font-semibold text-amber-800">...และอีก ${data.issues.length - 3} รายการ</li>` : ''}
-              </ul>
-            </div>
-          `;
-        }
+        const validIssues = (data && Array.isArray(data.issues))
+          ? data.issues.map(s => String(s).trim()).filter(s => s && s !== '-')
+          : [];
+        const cleanNotes = (data && data.unreadyNotes && String(data.unreadyNotes).trim() !== '-')
+          ? String(data.unreadyNotes).trim()
+          : '';
 
-        let unreadyNotesHtml = '';
-        if (unreadyNotes) {
-          unreadyNotesHtml = `
-            <div class="p-2.5 bg-rose-50 rounded-xl border border-rose-200 text-xs text-rose-900 space-y-0.5">
-              <span class="font-bold flex items-center gap-1">
-                <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                <span>รายงานอุปกรณ์ไม่พร้อมใช้งานเพิ่มเติม:</span>
+        let unreadyBoxHtml = '';
+        if (validIssues.length > 0 || cleanNotes) {
+          unreadyBoxHtml = `
+            <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-950 space-y-1.5 shadow-xs">
+              <span class="font-bold flex items-center gap-1.5 text-amber-900">
+                <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span>อุปกรณ์ที่ไม่พร้อมใช้งาน / ชำรุด / ไม่มี:</span>
               </span>
-              <p class="text-slate-800 font-medium pl-1">${unreadyNotes}</p>
+              ${validIssues.length > 0 ? `
+                <ul class="list-disc list-inside text-slate-800 pl-1 space-y-0.5 font-medium">
+                  ${validIssues.map(iss => `<li>${iss}</li>`).join('')}
+                </ul>
+              ` : ''}
+              ${cleanNotes ? `
+                <div class="pt-1 text-slate-700 font-normal pl-1 border-t border-amber-200/60">
+                  <span class="font-semibold text-amber-900">ระบุเพิ่มเติม:</span> ${cleanNotes}
+                </div>
+              ` : ''}
             </div>
           `;
         }
@@ -7593,7 +7587,7 @@
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-900">คันที่ ${carIdx}</span>
-                <span class="text-xs font-bold text-slate-800 break-words">${carVehName}</span>
+                ${carVehName ? `<span class="text-xs font-bold text-slate-800 break-words">${carVehName}</span>` : ''}
               </div>
               <div>${badgeHtml}</div>
             </div>
@@ -7603,8 +7597,7 @@
               <div><span class="text-slate-400">Time:</span> <strong class="text-slate-800">${time}</strong></div>
             </div>
 
-            ${defectHtml}
-            ${unreadyNotesHtml}
+            ${unreadyBoxHtml}
 
             <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
               <button type="button" onclick="openAmbulanceChecklistViewModal('${stId}', ${carIdx})" class="touch-btn px-3.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs transition shadow-xs active:scale-95">
@@ -7701,10 +7694,20 @@
       const catItems = currentCatalog.filter(i => i.cat === cat);
       catItems.forEach(item => {
         const s = activeState[item.id] || { status: '' };
+        let stNorm = normalizeAmbStatus(s.status);
+        if (!stNorm && saved) {
+          const issuesList = (saved.issues && Array.isArray(saved.issues)) ? saved.issues : [];
+          const issueMatch = issuesList.find(iss => iss.toLowerCase().includes(item.name.toLowerCase()));
+          if (issueMatch) {
+            stNorm = (issueMatch.toLowerCase().includes('no equipment') || issueMatch.includes('ไม่มี')) ? 'no_equipment' : 'not_ready';
+          } else if (issuesList.length === 0 && (saved.overallStatus === 'Ready' || saved.overallStatus === 'พร้อมใช้งาน')) {
+            stNorm = 'ready';
+          }
+        }
         let statusMark = '';
-        if (s.status === 'ready') statusMark = 'มี';
-        else if (s.status === 'not_ready') statusMark = 'ชำรุด';
-        else if (s.status === 'no_equipment') statusMark = 'ไม่มี';
+        if (stNorm === 'ready') statusMark = 'มี';
+        else if (stNorm === 'not_ready') statusMark = 'ชำรุด';
+        else if (stNorm === 'no_equipment') statusMark = 'ไม่มี';
 
         rowsHtml += `
           <tr style="font-size:11.5px; page-break-inside:avoid !important; break-inside:avoid !important;">
@@ -7855,7 +7858,7 @@
     if (carBadgeEl) carBadgeEl.textContent = `คันที่ ${cIdx}`;
 
     // Update Info Bar
-    const vehDesc = data && data.vehicleDesc ? data.vehicleDesc : (stInfo ? stInfo.vehicleDesc : '-');
+    const vehDesc = (data && data.vehicleDesc && data.vehicleDesc.trim() && data.vehicleDesc !== '-' && !data.vehicleDesc.startsWith('คันที่')) ? data.vehicleDesc.trim() : '-';
     const inspector = (data && data.inspectorName && !data.inspectorName.includes('หน่วยยานพาหนะ') && !data.inspectorName.includes('รถพยาบาล') && !data.inspectorName.includes('คัน')) ? data.inspectorName : (data && data.inspectorName ? data.inspectorName : '-');
     const time = formatDisplayTime(data ? (data.evalTime || data.completedAt || data.timestamp) : '-');
     const status = data ? (data.overallStatus || 'พร้อมใช้งาน') : 'ยังไม่ได้ประเมิน';
@@ -7927,35 +7930,44 @@
     if (elNotReadyCount) elNotReadyCount.textContent = notReadyCount;
     if (elNoEquipCount) elNoEquipCount.textContent = noEquipCount;
 
-    // Issues Alert Box
-    const issuesBox = document.getElementById('ambViewIssuesBox');
+    // Combined Unready Box
+    const unreadyBox = document.getElementById('ambViewUnreadyBox');
     const issuesListEl = document.getElementById('ambViewIssuesList');
-    const issuesCountEl = document.getElementById('ambViewIssuesCount');
-    const issues = (data && data.issues && data.issues.length > 0) ? data.issues : [];
+    const notesContainer = document.getElementById('ambViewUnreadyNotesContainer');
+    const notesText = document.getElementById('ambViewUnreadyNotesText');
 
-    if (issuesBox && issuesListEl) {
-      if (issues.length > 0) {
-        issuesBox.classList.remove('hidden');
-        if (issuesCountEl) issuesCountEl.textContent = issues.length;
-        issuesListEl.innerHTML = issues.map(iss => `<li>${iss}</li>`).join('');
-      } else {
-        issuesBox.classList.add('hidden');
-        issuesListEl.innerHTML = '';
-      }
-    }
+    const validIssues = (data && Array.isArray(data.issues))
+      ? data.issues.map(s => String(s).trim()).filter(s => s && s !== '-')
+      : [];
+    const cleanNotes = (data && data.unreadyNotes && String(data.unreadyNotes).trim() !== '-')
+      ? String(data.unreadyNotes).trim()
+      : '';
 
-    // Unready Notes Alert Box
-    const unreadyBox = document.getElementById('ambViewUnreadyNotesBox');
-    const unreadyText = document.getElementById('ambViewUnreadyNotesText');
-    const unreadyNotes = (data && data.unreadyNotes) ? data.unreadyNotes : '';
-
-    if (unreadyBox && unreadyText) {
-      if (unreadyNotes && unreadyNotes.trim() && unreadyNotes !== '-') {
+    if (unreadyBox) {
+      if (validIssues.length > 0 || cleanNotes) {
         unreadyBox.classList.remove('hidden');
-        unreadyText.textContent = unreadyNotes;
+        if (issuesListEl) {
+          if (validIssues.length > 0) {
+            issuesListEl.classList.remove('hidden');
+            issuesListEl.innerHTML = validIssues.map(iss => `<li>${iss}</li>`).join('');
+          } else {
+            issuesListEl.classList.add('hidden');
+            issuesListEl.innerHTML = '';
+          }
+        }
+        if (notesContainer && notesText) {
+          if (cleanNotes) {
+            notesContainer.classList.remove('hidden');
+            notesText.textContent = cleanNotes;
+          } else {
+            notesContainer.classList.add('hidden');
+            notesText.textContent = '';
+          }
+        }
       } else {
         unreadyBox.classList.add('hidden');
-        unreadyText.textContent = '';
+        if (issuesListEl) issuesListEl.innerHTML = '';
+        if (notesContainer) notesContainer.classList.add('hidden');
       }
     }
 
@@ -7979,8 +7991,22 @@
         catItems.forEach(item => {
           const itemState = (itemsMap && itemsMap[item.id]) ? itemsMap[item.id] : null;
           const status = itemState ? itemState.status : '';
-          const normStatus = normalizeAmbStatus(status);
+          let normStatus = normalizeAmbStatus(status);
           const actualQty = itemState ? (itemState.actualQty ?? item.defaultQty) : item.defaultQty;
+
+          // Intelligent fallback: if items map is partial but ambulance record was evaluated
+          if (!normStatus && data) {
+            const issueMatch = validIssues.find(iss => iss.toLowerCase().includes(item.name.toLowerCase()));
+            if (issueMatch) {
+              if (issueMatch.toLowerCase().includes('no equipment') || issueMatch.includes('ไม่มี')) {
+                normStatus = 'no_equipment';
+              } else {
+                normStatus = 'not_ready';
+              }
+            } else if (validIssues.length === 0 && (data.overallStatus === 'Ready' || data.overallStatus === 'พร้อมใช้งาน' || (data.readyCount && data.readyCount >= 70))) {
+              normStatus = 'ready';
+            }
+          }
 
           let badge = '';
           if (normStatus === 'ready') {

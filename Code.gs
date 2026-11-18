@@ -266,8 +266,14 @@ function getInitialData() {
           }
 
           const timeFormatted = formatTimeOnly(r[1]);
-          const defectsStr = formatCell(r[11]);
-          const issuesList = defectsStr ? defectsStr.split('; ').filter(Boolean) : [];
+          const defectsStr = (formatCell(r[11]) || '').trim();
+          const issuesList = (defectsStr && defectsStr !== '-')
+            ? defectsStr.split('; ').map(s => s.trim()).filter(s => s && s !== '-')
+            : [];
+          const unreadyNotesStr = (formatCell(r[12]) || '').trim();
+          const cleanUnreadyNotes = (unreadyNotesStr === '-') ? '' : unreadyNotesStr;
+          const rawVehDesc = formatCell(r[4]);
+          const cleanVehDesc = (rawVehDesc === '-' || rawVehDesc.startsWith('คันที่')) ? '' : rawVehDesc;
 
           const chkObj = {
             checklistId: formatCell(r[0]),
@@ -278,16 +284,16 @@ function getInitialData() {
             stationName: stRaw,
             carIndex: carIdx,
             vehicleNo: carNoStr || ('คันที่ ' + carIdx),
-            vehicleDesc: formatCell(r[4]),
+            vehicleDesc: cleanVehDesc,
             inspectorName: formatCell(r[5]),
             overallStatus: formatCell(r[6]),
             totalItems: Number(r[7]) || 71,
             readyCount: Number(r[8]) || 0,
             notReadyCount: Number(r[9]) || 0,
             noEquipCount: Number(r[10]) || 0,
-            defectsSummary: defectsStr,
+            defectsSummary: (defectsStr === '-') ? '' : defectsStr,
             issues: issuesList,
-            unreadyNotes: formatCell(r[12]),
+            unreadyNotes: cleanUnreadyNotes,
             items: itemsObj
           };
 
