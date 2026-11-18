@@ -6535,9 +6535,30 @@
     return list;
   }
 
+  function normalizeAmbStatus(val) {
+    if (!val) return '';
+    const s = String(val).toLowerCase().trim();
+    if (s === 'ready' || s === 'พร้อมใช้งาน' || s === 'พร้อม') return 'ready';
+    if (s === 'not_ready' || s === 'not ready' || s === 'ไม่พร้อมใช้งาน' || s === 'ไม่พร้อม' || s === 'ชำรุด') return 'not_ready';
+    if (s === 'no_equipment' || s === 'no equipment' || s === 'ไม่มีอุปกรณ์' || s === 'ไม่มี') return 'no_equipment';
+    return s;
+  }
+
   function getAmbulanceRecord(stationId, carIdx = 1) {
     if (!stationId) return null;
     const cIdx = (carIdx === 2) ? 2 : 1;
+
+    function sanitizeRecord(rec) {
+      if (!rec || typeof rec !== 'object') return null;
+      if (typeof rec.items === 'string') {
+        try { rec.items = JSON.parse(rec.items); } catch(e) {}
+      } else if (!rec.items && typeof rec.itemsData === 'object' && rec.itemsData !== null) {
+        rec.items = rec.itemsData;
+      } else if (!rec.items && typeof rec.itemsJson === 'string') {
+        try { rec.items = JSON.parse(rec.itemsJson); } catch(e) {}
+      }
+      return rec;
+    }
 
     // 1. Check localStorage first
     const localKeys = [
@@ -6554,7 +6575,7 @@
         try {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
-            return parsed;
+            return sanitizeRecord(parsed);
           }
         } catch(e) {}
       }
@@ -6580,11 +6601,12 @@
       for (const k of appKeys) {
         const item = APP_STATE.ambulanceChecklists[k];
         if (item && typeof item === 'object') {
+          const sanitized = sanitizeRecord(item);
           // Sync into localStorage for offline cache & consistency
           try {
-            localStorage.setItem(`amb_checklist_${stationId}_car${cIdx}`, JSON.stringify(item));
+            localStorage.setItem(`amb_checklist_${stationId}_car${cIdx}`, JSON.stringify(sanitized));
           } catch(e) {}
-          return item;
+          return sanitized;
         }
       }
     }
@@ -6933,9 +6955,15 @@
 
     const currentCatalog = getAmbulanceCatalogForStation(stationId);
     ambItemState = {};
+    const savedItems = (saved && saved.items && typeof saved.items === 'object') ? saved.items : {};
     currentCatalog.forEach(item => {
-      if (saved && saved.items && saved.items[item.id] && saved.items[item.id].status) {
-        ambItemState[item.id] = { ...saved.items[item.id] };
+      const itm = savedItems[item.id];
+      if (itm && itm.status) {
+        ambItemState[item.id] = {
+          actualQty: itm.actualQty ?? item.defaultQty,
+          status: normalizeAmbStatus(itm.status),
+          notes: itm.notes || ''
+        };
       } else {
         ambItemState[item.id] = {
           actualQty: item.defaultQty,
@@ -7006,9 +7034,10 @@
       const catItems = currentCatalog.filter(i => i.cat === cat);
       catItems.forEach((item) => {
         const state = ambItemState[item.id] || { actualQty: item.defaultQty, status: '', notes: '' };
-        const isReady = (state.status === 'ready');
-        const isNotReady = (state.status === 'not_ready');
-        const isNoEquip = (state.status === 'no_equipment');
+        const stNorm = normalizeAmbStatus(state.status);
+        const isReady = (stNorm === 'ready');
+        const isNotReady = (stNorm === 'not_ready');
+        const isNoEquip = (stNorm === 'no_equipment');
 
         html += `
           <tr class="hover:bg-slate-50/70 border-b border-slate-100 transition text-[11px] sm:text-xs">
@@ -7858,16 +7887,32 @@
     let notReadyCount = data ? (data.notReadyCount || (data.summaryNotReady ?? 0)) : 0;
     let noEquipCount = data ? (data.noEquipCount || (data.summaryNoEquipment ?? 0)) : 0;
 
-    if (data && data.items && Object.keys(data.items).length > 0) {
+    let itemsMap = {};
+    if (data) {
+      if (data.items && typeof data.items === 'object') {
+        itemsMap = data.items;
+      } else if (typeof data.items === 'string') {
+        try { itemsMap = JSON.parse(data.items); } catch(e) {}
+      } else if (data.itemsData && typeof data.itemsData === 'object') {
+        itemsMap = data.itemsData;
+      } else if (typeof data.itemsData === 'string') {
+        try { itemsMap = JSON.parse(data.itemsData); } catch(e) {}
+      } else if (typeof data.itemsJson === 'string') {
+        try { itemsMap = JSON.parse(data.itemsJson); } catch(e) {}
+      }
+    }
+
+    if (itemsMap && Object.keys(itemsMap).length > 0) {
       readyCount = 0;
       notReadyCount = 0;
       noEquipCount = 0;
       catalog.forEach(item => {
-        const itemState = data.items[item.id];
+        const itemState = itemsMap[item.id];
         if (itemState) {
-          if (itemState.status === 'Ready' || itemState.status === 'พร้อมใช้งาน') readyCount++;
-          else if (itemState.status === 'Not Ready' || itemState.status === 'ไม่พร้อมใช้งาน') notReadyCount++;
-          else if (itemState.status === 'No Equipment' || itemState.status === 'ไม่มีอุปกรณ์') noEquipCount++;
+          const st = normalizeAmbStatus(itemState.status);
+          if (st === 'ready') readyCount++;
+          else if (st === 'not_ready') notReadyCount++;
+          else if (st === 'no_equipment') noEquipCount++;
         }
       });
     }
@@ -7932,16 +7977,17 @@
         `;
 
         catItems.forEach(item => {
-          const itemState = (data && data.items && data.items[item.id]) ? data.items[item.id] : null;
+          const itemState = (itemsMap && itemsMap[item.id]) ? itemsMap[item.id] : null;
           const status = itemState ? itemState.status : '';
+          const normStatus = normalizeAmbStatus(status);
           const actualQty = itemState ? (itemState.actualQty ?? item.defaultQty) : item.defaultQty;
 
           let badge = '';
-          if (status === 'Ready' || status === 'พร้อมใช้งาน') {
+          if (normStatus === 'ready') {
             badge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>พร้อมใช้งาน</span>';
-          } else if (status === 'Not Ready' || status === 'ไม่พร้อมใช้งาน') {
+          } else if (normStatus === 'not_ready') {
             badge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>ไม่พร้อมใช้งาน</span>';
-          } else if (status === 'No Equipment' || status === 'ไม่มีอุปกรณ์') {
+          } else if (normStatus === 'no_equipment') {
             badge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>ไม่มีอุปกรณ์</span>';
           } else {
             badge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200">ยังไม่ได้ตรวจ</span>';
