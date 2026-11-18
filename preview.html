@@ -6401,22 +6401,14 @@
         </div>
       </div>
 
-      <!-- Footer with Go to Station Button and Export PDF -->
-      <div class="p-3.5 sm:p-5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2.5 flex-shrink-0">
-        <div>
-          <button type="button" id="btnAmbViewGoStation" onclick="goToStationFromViewModal()" class="touch-btn px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span>ไปที่จุดประจำการนี้เพื่อประเมิน/แก้ไข</span>
-          </button>
-        </div>
-        <div class="flex items-center gap-2">
-          <button type="button" onclick="generateAmbulancePDFReportFromView()" class="touch-btn px-4 py-2.5 rounded-xl border border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs shadow-xs active:scale-95 transition">
-            Report as PDF
-          </button>
-          <button type="button" onclick="closeAmbulanceChecklistViewModal()" class="touch-btn px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs active:scale-95 transition">
-            ปิด
-          </button>
-        </div>
+      <!-- Footer with Export PDF and Close -->
+      <div class="p-3.5 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 flex-shrink-0">
+        <button type="button" onclick="generateAmbulancePDFReportFromView()" class="touch-btn px-4 py-2.5 rounded-xl border border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs shadow-xs active:scale-95 transition">
+          Report as PDF
+        </button>
+        <button type="button" onclick="closeAmbulanceChecklistViewModal()" class="touch-btn px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs active:scale-95 transition">
+          ปิด
+        </button>
       </div>
 
     </div>
@@ -7586,9 +7578,8 @@
             ${unreadyNotesHtml}
 
             <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-              <button type="button" onclick="openAmbulanceChecklistViewModal('${stId}', ${carIdx})" class="touch-btn px-3.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs active:scale-95">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                <span>ดู Checklist</span>
+              <button type="button" onclick="openAmbulanceChecklistViewModal('${stId}', ${carIdx})" class="touch-btn px-3.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs transition shadow-xs active:scale-95">
+                Check list
               </button>
               ${data ? `
                 <button type="button" onclick="generateAmbulancePDFReport('${stId}', ${carIdx})" class="touch-btn px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition border border-slate-200 active:scale-95">
@@ -7609,12 +7600,6 @@
               </div>
               <h4 class="font-bold text-slate-900 text-sm sm:text-base font-thai">${stName}</h4>
               ${item.hasTwo ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">2 Units</span>' : ''}
-            </div>
-            <div>
-              <button type="button" onclick="onStationChanged('${st.id}')" class="text-xs font-bold text-purple-700 hover:bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200 flex items-center gap-1 transition">
-                <span>ไปที่จุดตรวจ</span>
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-              </button>
             </div>
           </div>
 
