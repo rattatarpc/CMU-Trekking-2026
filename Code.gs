@@ -449,14 +449,23 @@ function saveOrUpdateCase(caseData) {
 
     if (photoList.length > 0) {
       const savedUrls = [];
+      let photoUploadError = null;
       for (let p = 0; p < photoList.length; p++) {
         const pItem = photoList[p];
         if (pItem) {
-          const url = savePhotoToDrive(caseId, pItem, p);
-          if (url) savedUrls.push(url);
+          try {
+            const url = savePhotoToDrive(caseId, pItem, p);
+            if (url) savedUrls.push(url);
+          } catch (pErr) {
+            Logger.log('Photo upload warning: ' + pErr.message);
+            photoUploadError = pErr.message;
+          }
         }
       }
       caseData.Photo_URL = savedUrls.join(', ');
+      if (photoUploadError && savedUrls.length === 0) {
+        caseData.Photo_URL = '[Photo upload error: ' + photoUploadError + ']';
+      }
       caseData.Photo_Data = '';
       caseData.Photo_List = '';
     }
