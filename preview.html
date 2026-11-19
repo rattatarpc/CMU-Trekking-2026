@@ -872,8 +872,14 @@
           <!-- Student ID, Faculty, Year -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Student ID</label>
-              <input type="text" id="field_Student_ID" placeholder="" maxlength="15" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-cmu-purple focus:outline-none font-sans font-medium">
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-bold text-slate-700">Student ID</label>
+                <span id="studentAutofillBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
+              </div>
+              <input type="text" id="field_Student_ID" placeholder="รหัสนักศึกษา 9 หลัก" maxlength="15"
+                     oninput="handleStudentIdInput(this.value, false)"
+                     onchange="handleStudentIdInput(this.value, true)"
+                     class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-cmu-purple focus:outline-none font-sans font-medium">
             </div>
 
             <div class="relative" id="facultyContainer">
@@ -1512,11 +1518,11 @@
     // ==========================================
     // GITHUB PAGES / STANDALONE UNIVERSAL API BRIDGE
     // ==========================================
-    const CURRENT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbyKQM8dGQLRA1HPILWw7DF8accmfLNbwITqE78Iwgh0lJ3SfwIHgVPdlY4pysz2eiGLOQ/exec';
+    const CURRENT_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbytES_xf7W1_k-wKFwBu8Mp1my-7aDV6l4-tTDwMeor6NdQgwNocE8-PJO4gv7k3Qm-TQ/exec';
     
     // Auto-update legacy/cached URL in browser localStorage if outdated
     let savedApiUrl = localStorage.getItem('cmu_gas_api_url');
-    if (savedApiUrl && !savedApiUrl.includes('AKfycbyKQM8dGQLRA1HPILWw7DF8accmfLNbwITqE78Iwgh0lJ3SfwIHgVPdlY4pysz2eiGLOQ')) {
+    if (savedApiUrl && !savedApiUrl.includes('AKfycbytES_xf7W1_k-wKFwBu8Mp1my-7aDV6l4-tTDwMeor6NdQgwNocE8-PJO4gv7k3Qm-TQ')) {
       localStorage.setItem('cmu_gas_api_url', CURRENT_DEPLOYMENT_URL);
       savedApiUrl = CURRENT_DEPLOYMENT_URL;
     }
@@ -1529,6 +1535,19 @@
           let fetchPromise;
           if (action === 'getInitialData') {
             fetchPromise = fetch(GAS_WEB_APP_URL + '?action=getInitialData', {
+              method: 'GET',
+              redirect: 'follow',
+              cache: 'no-store'
+            });
+          } else if (action === 'getStudentsDirectory') {
+            fetchPromise = fetch(GAS_WEB_APP_URL + '?action=getStudentsDirectory', {
+              method: 'GET',
+              redirect: 'follow',
+              cache: 'no-store'
+            });
+          } else if (action === 'lookupStudentById') {
+            const sid = (payload && payload.studentId) ? payload.studentId : (payload || '');
+            fetchPromise = fetch(GAS_WEB_APP_URL + '?action=lookupStudentById&studentId=' + encodeURIComponent(sid), {
               method: 'GET',
               redirect: 'follow',
               cache: 'no-store'
@@ -1565,7 +1584,10 @@
           withFailureHandler(fn) { return createGasRunner(successHandler, fn); },
           getInitialData() { callApi('getInitialData', {}); },
           saveOrUpdateCase(data) { callApi('saveOrUpdateCase', data); },
-          saveAmbulanceChecklist(data) { callApi('saveAmbulanceChecklist', data); }
+          saveAmbulanceChecklist(data) { callApi('saveAmbulanceChecklist', data); },
+          getStudentsDirectory() { callApi('getStudentsDirectory', {}); },
+          lookupStudentById(studentId) { callApi('lookupStudentById', { studentId }); },
+          importStudentsBatch(data) { callApi('importStudentsBatch', data); }
         };
       }
       window.google = { script: { run: createGasRunner(null, null) } };
@@ -1602,7 +1624,11 @@
       activeOnlyFilter: false,
       chartStationTriageInstance: null,
       chartStationDiagInstance: null,
-      selectedDetailCaseId: null
+      selectedDetailCaseId: null,
+      studentsMap: {},
+      studentFaculties: [],
+      studentsCount: 0,
+      lastAutofilledStudentId: null
     };
 
     // Station Coordinates on SVG Trail (Real Distance & Elevation Profile - 1060 x 410 canvas)
@@ -2336,6 +2362,7 @@
       loadCheckinFromStorage();
       initCmdChartSlots();
       initAllCustomDropdowns();
+      loadStudentsDirectoryCache(false);
       loadData(false);
       startAutoRefresh();
     });
@@ -2564,6 +2591,7 @@
       document.getElementById('checkinModal').classList.add('hidden');
       updateRoleUI();
       onStationChanged(st);
+      loadStudentsDirectoryCache(false);
       startAutoRefresh();
       showToast(`เข้าสู่ระบบ: ${name} (${getStationName(st)})`);
     }
@@ -2592,6 +2620,7 @@
       document.getElementById('checkinModal').classList.add('hidden');
       updateRoleUI();
       onStationChanged('ALL');
+      loadStudentsDirectoryCache(false);
       startAutoRefresh();
       showToast(`ยินดีต้อนรับ Commander: เข้าสู่ระบบส่วนกลางแล้ว`);
     }
@@ -2601,10 +2630,13 @@
         localStorage.removeItem('cmu_user_role');
         localStorage.removeItem('cmu_staff_name');
         localStorage.removeItem('cmu_staff_station');
+        localStorage.removeItem(STUDENTS_CACHE_KEY);
         APP_STATE.userRole = null;
         APP_STATE.isCommander = false;
         APP_STATE.staffStation = null;
         APP_STATE.staffName = 'Guest';
+        APP_STATE.studentsMap = {};
+        APP_STATE.studentsCount = 0;
         if (APP_STATE.autoRefreshInterval) clearInterval(APP_STATE.autoRefreshInterval);
         showLoginRoleSelect();
         updateRoleUI();
@@ -25932,6 +25964,8 @@
 
       removeDocumentPhoto();
       populateDiagnosesToForm('');
+      APP_STATE.lastAutofilledStudentId = null;
+      if (typeof updateStudentAutofillBadge === 'function') updateStudentAutofillBadge(null);
 
       syncAllCustomSelects();
     }
@@ -28565,7 +28599,7 @@
       if (y === '2' || y.includes('ปี 2') || y.includes('year 2') || y === 'ปี2') return 'Year 2';
       if (y === '3' || y.includes('ปี 3') || y.includes('year 3') || y === 'ปี3') return 'Year 3';
       if (y === '4' || y.includes('ปี 4') || y.includes('year 4') || y === 'ปี4') return 'Year 4';
-      if (y === '5' || y === '6' || y.includes('5+') || y.includes('year 5')) return 'Year 5+';
+      if (y === '5' || y === '6' || y === '7' || y === '8' || y.includes('5+') || y.includes('year 5') || (/^\d+$/.test(y) && parseInt(y, 10) >= 5)) return 'Year 5+';
       if (y.includes('grad') || y.includes('ป.โท') || y.includes('ป.เอก') || y.includes('บัณฑิต')) return 'Graduate';
       return '';
     }
@@ -28574,8 +28608,585 @@
       if (!rawGender) return '';
       const g = String(rawGender).trim().toLowerCase();
       if (g === 'ชาย' || g === 'ช' || g === 'male' || g === 'm' || g === 'นาย') return 'Male';
-      if (g === 'หญิง' || g === 'ญ' || g === 'female' || g === 'f' || g === 'นางสาว' || g === 'น.ส.') return 'Female';
+      if (g === 'หญิง' || g === 'ญ' || g === 'female' || g === 'f' || g === 'นางสาว' || g === 'นาง' || g === 'น.ส.') return 'Female';
       return '';
+    }
+
+    // ==========================================
+    // STUDENT ID AUTO-FILL & DIRECTORY CACHE ENGINE
+    // ==========================================
+    const STUDENTS_CACHE_KEY = 'cmu_students_cache_v1';
+
+    function parseStudentRecord(studentId, rec, facultiesList) {
+      const id = String(studentId || '').trim();
+      if (!rec) return null;
+
+      // Support both compact array [name, gender, age, facIdxOrName, year, phone, drug, food, disease, highRiskFlag, highRiskReason]
+      // and object format
+      const rawName = Array.isArray(rec) ? String(rec[0] || '') : String(rec.name || rec.fullName || '');
+      const rawGender = Array.isArray(rec) ? String(rec[1] || '') : String(rec.gender || '');
+      const rawAge = Array.isArray(rec) ? String(rec[2] || '') : String(rec.age || '');
+      const rawFacVal = Array.isArray(rec) ? rec[3] : (rec.faculty || '');
+      const rawYear = Array.isArray(rec) ? String(rec[4] || '') : String(rec.year || '');
+      let rawPhone = Array.isArray(rec) ? String(rec[5] || '') : String(rec.phone || '');
+      const rawDrug = Array.isArray(rec) ? String(rec[6] || '') : String(rec.drugAllergy || '');
+      const rawFood = Array.isArray(rec) ? String(rec[7] || '') : String(rec.foodAllergy || '');
+      const rawDisease = Array.isArray(rec) ? String(rec[8] || '') : String(rec.underlyingDisease || '');
+      const rawHighRisk = Array.isArray(rec) ? rec[9] : rec.highRisk;
+      const rawHighRiskReason = Array.isArray(rec) ? String(rec[10] || '') : String(rec.highRiskReason || '');
+
+      // Clean name & strip known prefixes ('ระบบไม่ระบุ', 'นางสาว', 'น.ส.', 'นาย', 'นาง')
+      let cleanName = rawName.replace(/\u00a0/g, ' ').trim();
+      let inferredGender = '';
+      const prefixRules = [
+        { regex: /^ระบบไม่ระบุ\s*/i, gender: '' },
+        { regex: /^(?:นางสาว|น\.ส\.)\s*/i, gender: 'Female' },
+        { regex: /^นาง\s+/i, gender: 'Female' },
+        { regex: /^นาย\s*/i, gender: 'Male' }
+      ];
+      for (let p = 0; p < prefixRules.length; p++) {
+        if (prefixRules[p].regex.test(cleanName)) {
+          if (prefixRules[p].gender) inferredGender = prefixRules[p].gender;
+          cleanName = cleanName.replace(prefixRules[p].regex, '').trim();
+        }
+      }
+
+      const nameParts = cleanName ? cleanName.split(/\s+/) : [];
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+      const gender = normalizeGender(rawGender) || inferredGender;
+
+      let resolvedFac = '';
+      if (typeof rawFacVal === 'number' && Array.isArray(facultiesList) && facultiesList[rawFacVal]) {
+        resolvedFac = facultiesList[rawFacVal];
+      } else if (rawFacVal !== undefined && rawFacVal !== null && rawFacVal !== -1) {
+        resolvedFac = String(rawFacVal);
+      }
+      const faculty = normalizeFacultyName(resolvedFac.replace(/\u00a0/g, ' ').trim());
+
+      const isStaff = (rawYear.trim() === 'บุคลากร' || (id.length === 10 && id.startsWith('99')));
+      const patientType = isStaff ? 'Other' : 'Student';
+      const yearLevel = isStaff ? '' : normalizeYearLevel(rawYear);
+
+      rawPhone = rawPhone.replace(/^'+/, '').trim();
+      if (rawPhone && /^\d{8,9}$/.test(rawPhone) && !rawPhone.startsWith('0')) {
+        rawPhone = '0' + rawPhone;
+      }
+
+      const isNoneVal = (v) => {
+        if (!v) return true;
+        const s = String(v).trim().toLowerCase();
+        return s === '' || s === '-' || s === 'ไม่มี' || s === 'none' || s === 'no' || s === 'ไม่แพ้';
+      };
+
+      const hasDrug = !isNoneVal(rawDrug);
+      const hasFood = !isNoneVal(rawFood);
+      let allergy = 'ไม่มี';
+      if (hasDrug && hasFood) {
+        allergy = `แพ้ยา: ${rawDrug.trim()}, แพ้อาหาร: ${rawFood.trim()}`;
+      } else if (hasDrug) {
+        allergy = rawDrug.trim();
+      } else if (hasFood) {
+        allergy = `แพ้อาหาร: ${rawFood.trim()}`;
+      }
+
+      const underlyingDisease = isNoneVal(rawDisease) ? 'ไม่มี' : rawDisease.trim();
+
+      const isHighRisk = (
+        rawHighRisk === 1 ||
+        rawHighRisk === true ||
+        String(rawHighRisk).trim() === 'ใช่' ||
+        String(rawHighRisk).trim().toLowerCase() === 'yes' ||
+        String(rawHighRisk).trim() === '1'
+      );
+
+      return {
+        studentId: id,
+        patientType: patientType,
+        firstName: firstName,
+        lastName: lastName,
+        gender: gender,
+        age: rawAge.trim(),
+        faculty: faculty,
+        yearLevel: yearLevel,
+        emergencyContact: rawPhone,
+        allergy: allergy,
+        underlyingDisease: underlyingDisease,
+        highRisk: isHighRisk ? 'Yes' : 'No',
+        highRiskReason: isHighRisk ? rawHighRiskReason.trim() : ''
+      };
+    }
+
+    function updateStudentAutofillBadge(state, text) {
+      const badge = document.getElementById('studentAutofillBadge');
+      if (!badge) return;
+      if (!state) {
+        badge.className = 'hidden text-[10px] font-bold px-2 py-0.5 rounded-full';
+        badge.textContent = '';
+        return;
+      }
+      if (state === 'highrisk') {
+        badge.className = 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300 animate-pulse';
+      } else if (state === 'matched') {
+        badge.className = 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300';
+      } else if (state === 'searching') {
+        badge.className = 'inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200';
+      } else {
+        badge.className = 'inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500';
+      }
+      badge.textContent = text || '';
+    }
+
+    function applyStudentAutofill(studentObj, options = {}) {
+      if (!studentObj) return;
+
+      const ptEl = document.getElementById('field_Patient_Type');
+      if (ptEl) {
+        ptEl.value = studentObj.patientType || 'Student';
+        if (typeof handlePatientTypeChange === 'function') handlePatientTypeChange(ptEl.value);
+      }
+
+      const idEl = document.getElementById('field_Student_ID');
+      if (idEl && studentObj.studentId && idEl.value.trim() !== studentObj.studentId) {
+        idEl.value = studentObj.studentId;
+      }
+
+      const setVal = (elId, val) => {
+        const el = document.getElementById(elId);
+        if (el && val !== undefined && val !== null) {
+          el.value = val;
+        }
+      };
+
+      setVal('field_First_Name', studentObj.firstName || '');
+      setVal('field_Last_Name', studentObj.lastName || '');
+      setVal('field_Faculty', studentObj.faculty || '');
+      setVal('field_Year_Level', studentObj.yearLevel || '');
+      setVal('field_Gender', studentObj.gender || '');
+      if (studentObj.age) setVal('field_Age', studentObj.age);
+      setVal('field_Emergency_Contact', studentObj.emergencyContact || '');
+      setVal('field_Underlying_Disease', studentObj.underlyingDisease || 'ไม่มี');
+      setVal('field_Allergy', studentObj.allergy || 'ไม่มี');
+
+      // High Risk Radio & Reason
+      const hrYes = document.getElementById('field_High_Risk_Yes');
+      const hrNo = document.getElementById('field_High_Risk_No');
+      const hrReason = document.getElementById('field_High_Risk_Reason');
+      const hrCont = document.getElementById('highRiskReasonContainer');
+
+      if (studentObj.highRisk === 'Yes') {
+        if (hrYes) hrYes.checked = true;
+        if (hrCont) hrCont.classList.remove('hidden');
+        if (hrReason) hrReason.value = studentObj.highRiskReason || '';
+      } else {
+        if (hrNo) hrNo.checked = true;
+        if (hrCont) hrCont.classList.add('hidden');
+        if (hrReason) hrReason.value = '';
+      }
+
+      // Clear any red validation borders on autofilled fields
+      ['field_Patient_Type', 'field_Student_ID', 'field_First_Name', 'field_Last_Name', 'field_Faculty', 'field_Gender'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.value) {
+          el.classList.remove('border-red-500', 'bg-red-50/70', 'ring-2', 'ring-red-400');
+          el.classList.add('border-slate-300', 'bg-slate-50');
+        }
+      });
+
+      if (typeof syncAllCustomSelects === 'function') syncAllCustomSelects();
+      APP_STATE.lastAutofilledStudentId = studentObj.studentId;
+
+      const fullName = [studentObj.firstName, studentObj.lastName].filter(Boolean).join(' ') || studentObj.studentId;
+      if (studentObj.highRisk === 'Yes') {
+        updateStudentAutofillBadge('highrisk', '⚠️ กลุ่มเสี่ยง High Risk');
+        if (!options.silent && typeof showToast === 'function') {
+          showToast(`⚠️ พบข้อมูลกลุ่มเสี่ยง: ${fullName} (${studentObj.highRiskReason || 'High Risk'})`);
+        }
+      } else {
+        updateStudentAutofillBadge('matched', '✓ Auto-fill');
+        if (!options.silent && typeof showToast === 'function') {
+          showToast(`✓ Auto-fill: ${fullName}`);
+        }
+      }
+    }
+
+    function clearStudentAutofillFields() {
+      const clearIds = [
+        'field_First_Name',
+        'field_Last_Name',
+        'field_Faculty',
+        'field_Year_Level',
+        'field_Gender',
+        'field_Age',
+        'field_Emergency_Contact',
+        'field_Underlying_Disease',
+        'field_Allergy'
+      ];
+      clearIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      const hrNo = document.getElementById('field_High_Risk_No');
+      const hrCont = document.getElementById('highRiskReasonContainer');
+      const hrReason = document.getElementById('field_High_Risk_Reason');
+      if (hrNo) hrNo.checked = true;
+      if (hrCont) hrCont.classList.add('hidden');
+      if (hrReason) hrReason.value = '';
+      if (typeof syncAllCustomSelects === 'function') syncAllCustomSelects();
+      APP_STATE.lastAutofilledStudentId = null;
+    }
+
+    let studentLookupTimer = null;
+    function handleStudentIdInput(rawVal, isCommit = false) {
+      const cleanId = String(rawVal || '').replace(/\s+/g, '');
+      if (studentLookupTimer) clearTimeout(studentLookupTimer);
+
+      if (!cleanId || cleanId.length < 9) {
+        updateStudentAutofillBadge(null);
+        if (APP_STATE.lastAutofilledStudentId) {
+          clearStudentAutofillFields();
+        }
+        return;
+      }
+
+      // Check local cache immediately (0ms)
+      const cachedRec = APP_STATE.studentsMap && APP_STATE.studentsMap[cleanId];
+      if (cachedRec) {
+        if (APP_STATE.lastAutofilledStudentId !== cleanId || isCommit) {
+          const parsed = parseStudentRecord(cleanId, cachedRec, APP_STATE.studentFaculties);
+          applyStudentAutofill(parsed);
+        }
+        return;
+      }
+
+      // If user had autofilled another ID and typed a different 9+ digit ID not in cache, clear old student's fields
+      if (APP_STATE.lastAutofilledStudentId && APP_STATE.lastAutofilledStudentId !== cleanId) {
+        clearStudentAutofillFields();
+      }
+
+      // Trigger remote fallback lookup if length is 9 digits (student) or 10 digits starting with 99 (staff)
+      const isTargetLength = (cleanId.length === 9 && !cleanId.startsWith('99')) || (cleanId.length === 10 && cleanId.startsWith('99'));
+      if (!isTargetLength && !isCommit) return;
+
+      studentLookupTimer = setTimeout(() => {
+        if (typeof google !== 'undefined' && google.script && google.script.run && APP_STATE.isOnline) {
+          updateStudentAutofillBadge('searching', 'กำลังค้นหา...');
+          google.script.run
+            .withSuccessHandler(res => {
+              if (res && res.success && res.found && res.record) {
+                if (!APP_STATE.studentsMap) APP_STATE.studentsMap = {};
+                APP_STATE.studentsMap[cleanId] = res.record;
+                const parsed = parseStudentRecord(cleanId, res.record, APP_STATE.studentFaculties);
+                applyStudentAutofill(parsed);
+              } else {
+                updateStudentAutofillBadge('notfound', 'ไม่พบรหัสในฐานข้อมูล');
+              }
+            })
+            .withFailureHandler(() => {
+              updateStudentAutofillBadge(null);
+            })
+            .lookupStudentById(cleanId);
+        } else if (APP_STATE.studentsCount > 0) {
+          updateStudentAutofillBadge('notfound', 'ไม่พบรหัสในฐานข้อมูล');
+        }
+      }, isCommit ? 0 : 250);
+    }
+
+    function updateStudentDbStatusUI(status, count) {
+      const dot = document.getElementById('studentDbStatusDot');
+      const txt = document.getElementById('studentDbStatusText');
+      if (!dot || !txt) return;
+
+      if (status === 'ready' && count > 0) {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+        txt.textContent = `ฐานข้อมูล นศ.: ${Number(count).toLocaleString()} คน`;
+      } else if (status === 'loading') {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
+        txt.textContent = 'ฐานข้อมูล นศ.: กำลังซิงก์...';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-slate-400';
+        txt.textContent = 'ฐานข้อมูล นศ.: คลิกเพื่อนำเข้าไฟล์';
+      }
+    }
+
+    function saveStudentsCacheToStorage(faculties, dataMap, count) {
+      APP_STATE.studentFaculties = faculties || [];
+      APP_STATE.studentsMap = dataMap || {};
+      APP_STATE.studentsCount = count || Object.keys(APP_STATE.studentsMap).length;
+      updateStudentDbStatusUI('ready', APP_STATE.studentsCount);
+      try {
+        localStorage.setItem(STUDENTS_CACHE_KEY, JSON.stringify({
+          updatedAt: Date.now(),
+          count: APP_STATE.studentsCount,
+          faculties: APP_STATE.studentFaculties,
+          data: APP_STATE.studentsMap
+        }));
+      } catch (e) {
+        console.warn('localStorage student cache quota warning:', e);
+      }
+    }
+
+    function loadStudentsDirectoryCache(forceRefresh = false) {
+      // Only load student directory after user has authenticated as Staff or Commander
+      if (!APP_STATE.userRole && !localStorage.getItem('cmu_user_role')) {
+        return;
+      }
+      // 1. Load from localStorage immediately if available
+      if (!forceRefresh) {
+        try {
+          const raw = localStorage.getItem(STUDENTS_CACHE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.data && parsed.count > 0) {
+              APP_STATE.studentFaculties = parsed.faculties || [];
+              APP_STATE.studentsMap = parsed.data;
+              APP_STATE.studentsCount = parsed.count;
+              updateStudentDbStatusUI('ready', parsed.count);
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to parse cached students directory:', e);
+        }
+      }
+
+      // 2. Sync from Google Sheet in background
+      if (typeof google !== 'undefined' && google.script && google.script.run && navigator.onLine) {
+        if (APP_STATE.studentsCount === 0 || forceRefresh) {
+          updateStudentDbStatusUI('loading', 0);
+        }
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res && res.success && res.count > 0 && res.data) {
+              saveStudentsCacheToStorage(res.faculties || [], res.data, res.count);
+              if (forceRefresh && typeof showToast === 'function') {
+                showToast(`ซิงก์ฐานข้อมูลนักศึกษาสำเร็จ (${Number(res.count).toLocaleString()} คน)`);
+              }
+            } else if (APP_STATE.studentsCount === 0) {
+              updateStudentDbStatusUI('empty', 0);
+            }
+          })
+          .withFailureHandler(() => {
+            if (APP_STATE.studentsCount === 0) {
+              updateStudentDbStatusUI('empty', 0);
+            }
+          })
+          .getStudentsDirectory();
+      }
+    }
+
+    function handleStudentDbStatusClick() {
+      const fileInput = document.getElementById('studentDbFileInput');
+      if (APP_STATE.studentsCount > 0) {
+        const wantUpload = confirm(
+          `ฐานข้อมูลนักศึกษาพร้อมใช้งานแล้ว (${Number(APP_STATE.studentsCount).toLocaleString()} คน)\n\n` +
+          `• กด "ตกลง (OK)" เพื่อเลือกไฟล์ Excel/CSV ใหม่จากเครื่อง (และอัปเดตขึ้น Google Sheet)\n` +
+          `• กด "ยกเลิก (Cancel)" เพื่อซิงก์ข้อมูลล่าสุดจาก Google Sheet`
+        );
+        if (wantUpload && fileInput) {
+          fileInput.click();
+        } else {
+          loadStudentsDirectoryCache(true);
+        }
+      } else if (fileInput) {
+        fileInput.click();
+      }
+    }
+
+    async function parseXlsxFileInBrowser(arrayBuffer) {
+      const bytes = new Uint8Array(arrayBuffer);
+      const view = new DataView(arrayBuffer);
+      const entries = {};
+      let offset = 0;
+      const decoder = new TextDecoder('utf-8');
+
+      while (offset + 30 <= bytes.length) {
+        const sig = view.getUint32(offset, true);
+        if (sig !== 0x04034b50) break;
+        const method = view.getUint16(offset + 8, true);
+        const compSize = view.getUint32(offset + 18, true);
+        const nameLen = view.getUint16(offset + 26, true);
+        const extraLen = view.getUint16(offset + 28, true);
+        const name = decoder.decode(bytes.subarray(offset + 30, offset + 30 + nameLen));
+        const dataStart = offset + 30 + nameLen + extraLen;
+        const compData = bytes.subarray(dataStart, dataStart + compSize);
+
+        if (name === 'xl/sharedStrings.xml' || name === 'xl/worksheets/sheet1.xml') {
+          if (method === 0) {
+            entries[name] = decoder.decode(compData);
+          } else if (method === 8 && typeof DecompressionStream !== 'undefined') {
+            const ds = new DecompressionStream('deflate-raw');
+            const writer = ds.writable.getWriter();
+            writer.write(compData);
+            writer.close();
+            const resp = new Response(ds.readable);
+            const buf = await resp.arrayBuffer();
+            entries[name] = decoder.decode(buf);
+          }
+        }
+        offset = dataStart + compSize;
+      }
+
+      const strings = [];
+      if (entries['xl/sharedStrings.xml']) {
+        const siRegex = /<si>([\s\S]*?)<\/si>/g;
+        let m;
+        while ((m = siRegex.exec(entries['xl/sharedStrings.xml'])) !== null) {
+          const tRegex = /<t[^>]*>([\s\S]*?)<\/t>/g;
+          let tm, text = '';
+          while ((tm = tRegex.exec(m[1])) !== null) text += tm[1];
+          strings.push(text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"'));
+        }
+      }
+
+      const rows = [];
+      if (entries['xl/worksheets/sheet1.xml']) {
+        const rowRegex = /<row r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g;
+        const colIdxMap = { A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11 };
+        let rm;
+        while ((rm = rowRegex.exec(entries['xl/worksheets/sheet1.xml'])) !== null) {
+          if (rm[1] === '1') continue;
+          const arr = new Array(12).fill('');
+          const cRegex = /<c r="([A-Z]+)\d+"(?:[^>]*t="([a-zA-Z]+)")?[^>]*>(?:<v>([\s\S]*?)<\/v>)?<\/c>/g;
+          let cm;
+          while ((cm = cRegex.exec(rm[2])) !== null) {
+            const cIdx = colIdxMap[cm[1]];
+            if (cIdx !== undefined) {
+              let val = cm[3] || '';
+              if (cm[2] === 's' && val !== '') val = strings[parseInt(val, 10)] || '';
+              arr[cIdx] = String(val).replace(/\u00a0/g, ' ').trim();
+            }
+          }
+          if (arr[0]) rows.push(arr);
+        }
+      }
+      return rows;
+    }
+
+    function parseCsvTextInBrowser(csvText) {
+      const lines = csvText.replace(/^\uFEFF/, '').split(/\r?\n/);
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const parts = [];
+        let cur = '', inQ = false;
+        for (let c = 0; c < line.length; c++) {
+          const ch = line[c];
+          if (ch === '"') {
+            if (inQ && line[c + 1] === '"') { cur += '"'; c++; }
+            else inQ = !inQ;
+          } else if (ch === ',' && !inQ) {
+            parts.push(cur.trim());
+            cur = '';
+          } else {
+            cur += ch;
+          }
+        }
+        parts.push(cur.trim());
+        if (parts[0]) rows.push(parts);
+      }
+      return rows;
+    }
+
+    async function handleStudentDbFileUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      event.target.value = '';
+
+      try {
+        updateStudentDbStatusUI('loading', 0);
+        if (typeof showToast === 'function') showToast('กำลังอ่านไฟล์ฐานข้อมูลนักศึกษา...');
+
+        let rows = [];
+        if (file.name.toLowerCase().endsWith('.xlsx')) {
+          const buf = await file.arrayBuffer();
+          rows = await parseXlsxFileInBrowser(buf);
+        } else {
+          const text = await file.text();
+          rows = parseCsvTextInBrowser(text);
+        }
+
+        if (!rows || rows.length === 0) {
+          updateStudentDbStatusUI('empty', 0);
+          if (typeof showToast === 'function') showToast('ไม่พบข้อมูลในไฟล์ กรุณาตรวจสอบไฟล์');
+          return;
+        }
+
+        const faculties = [];
+        const facMap = {};
+        const dataMap = {};
+
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          const id = String(r[0] || '').trim();
+          if (!id) continue;
+          const fac = String(r[4] || '').replace(/\u00a0/g, ' ').trim();
+          let facIdx = -1;
+          if (fac) {
+            if (facMap[fac] === undefined) {
+              facMap[fac] = faculties.length;
+              faculties.push(fac);
+            }
+            facIdx = facMap[fac];
+          }
+          const hrRaw = String(r[10] || '').trim();
+          const isHr = (hrRaw === 'ใช่' || hrRaw.toLowerCase() === 'yes' || hrRaw === '1') ? 1 : 0;
+          dataMap[id] = [
+            String(r[1] || '').trim(),
+            String(r[2] || '').trim(),
+            String(r[3] || '').trim(),
+            facIdx,
+            String(r[5] || '').trim(),
+            String(r[6] || '').trim(),
+            (r[7] === 'ไม่มี' || r[7] === '-') ? '' : String(r[7] || '').trim(),
+            (r[8] === 'ไม่มี' || r[8] === '-') ? '' : String(r[8] || '').trim(),
+            (r[9] === 'ไม่มี' || r[9] === '-') ? '' : String(r[9] || '').trim(),
+            isHr,
+            String(r[11] || '').trim()
+          ];
+        }
+
+        const totalCount = Object.keys(dataMap).length;
+        saveStudentsCacheToStorage(faculties, dataMap, totalCount);
+        if (typeof showToast === 'function') {
+          showToast(`✓ โหลดฐานข้อมูลลงเครื่องสำเร็จ ${Number(totalCount).toLocaleString()} คน (ใช้งานได้ทันที)`);
+        }
+
+        // If current form has a student ID typed, trigger autofill right away
+        const curTypedId = document.getElementById('field_Student_ID')?.value;
+        if (curTypedId) handleStudentIdInput(curTypedId, true);
+
+        // Offer to sync all rows to Google Sheet tab 'Students' so other devices get it automatically
+        if (typeof google !== 'undefined' && google.script && google.script.run && navigator.onLine) {
+          const syncToSheet = confirm(
+            `โหลดข้อมูลนักศึกษา ${Number(totalCount).toLocaleString()} คน เข้าเครื่องนี้เรียบร้อยแล้ว (พิมพ์รหัสเพื่อเติมข้อมูลได้ทันที)\n\n` +
+            `ต้องการอัปโหลดข้อมูลชุดนี้ขึ้นเก็บในแท็บ "Students" บน Google Sheet ด้วยไหมครับ? (เพื่อให้เครื่องอื่นๆ ดึงไปใช้ได้อัตโนมัติ)`
+          );
+          if (syncToSheet) {
+            const batchSize = 3000;
+            for (let start = 0; start < rows.length; start += batchSize) {
+              const chunk = rows.slice(start, start + batchSize);
+              const isFirst = (start === 0);
+              if (typeof showToast === 'function') {
+                showToast(`กำลังอัปโหลดขึ้น Google Sheet (${Math.min(start + chunk.length, rows.length).toLocaleString()}/${rows.length.toLocaleString()})...`);
+              }
+              await new Promise((resolve) => {
+                google.script.run
+                  .withSuccessHandler(() => resolve())
+                  .withFailureHandler(() => resolve())
+                  .importStudentsBatch({ rows: chunk, resetSheet: isFirst });
+              });
+            }
+            if (typeof showToast === 'function') {
+              showToast(`✓ อัปโหลดข้อมูล ${Number(totalCount).toLocaleString()} คน ขึ้น Google Sheet แท็บ Students สำเร็จ!`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Student file import error:', err);
+        if (typeof showToast === 'function') showToast('เกิดข้อผิดพลาดในการอ่านไฟล์: ' + err.message);
+      }
     }
 
     function onQrScanSuccess(decodedText) {
@@ -28649,7 +29260,7 @@
           showToast('Scan QR สำเร็จ: ' + (parts[1] || '') + ' ' + (parts[2] || ''));
         }
       } else {
-        // Case 2: Single value QR (e.g. Student ID only)
+        // Case 2: Single value QR (e.g. Student ID only) -> populate ID and trigger auto-fill from directory
         const ptEl = document.getElementById('field_Patient_Type');
         if (ptEl && !ptEl.value) {
           ptEl.value = 'Student';
@@ -28661,9 +29272,7 @@
         if (typeof syncAllCustomSelects === 'function') syncAllCustomSelects();
         if (navigator.vibrate) navigator.vibrate(200);
         closeQrScannerModal();
-        if (typeof showToast === 'function') {
-          showToast('Scan รหัสสำเร็จ: ' + raw);
-        }
+        handleStudentIdInput(raw, true);
       }
     }
   </script>

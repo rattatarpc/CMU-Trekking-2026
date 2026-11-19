@@ -67,10 +67,22 @@ const HEADERS = [
  * Web App entry point with iOS Safari optimization
  */
 function doGet(e) {
-  if (e && e.parameter && e.parameter.action === 'getInitialData') {
-    const res = getInitialData();
-    return ContentService.createTextOutput(JSON.stringify(res))
-      .setMimeType(ContentService.MimeType.JSON);
+  if (e && e.parameter) {
+    if (e.parameter.action === 'getInitialData') {
+      const res = getInitialData();
+      return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (e.parameter.action === 'getStudentsDirectory') {
+      const res = getStudentsDirectory();
+      return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (e.parameter.action === 'lookupStudentById') {
+      const res = lookupStudentById(e.parameter.studentId || '');
+      return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
   }
   const htmlOutput = HtmlService.createTemplateFromFile('index').evaluate();
   return htmlOutput
@@ -102,6 +114,24 @@ function doPost(e) {
 
     if (action === 'saveAmbulanceChecklist') {
       const res = saveAmbulanceChecklist(body.payload || body.data || body);
+      return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'getStudentsDirectory') {
+      const res = getStudentsDirectory();
+      return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'lookupStudentById') {
+      const res = lookupStudentById(body.studentId || (body.payload && body.payload.studentId) || '');
+      return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'importStudentsBatch') {
+      const res = importStudentsBatch(body.payload || body);
       return ContentService.createTextOutput(JSON.stringify(res))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -683,4 +713,234 @@ function fixSheetHeaders() {
   headerRange.setFontWeight('bold');
   sheet.setFrozenRows(1);
   Logger.log('Headers successfully repaired and synchronized: ' + HEADERS.join(', '));
+}
+
+// ==============================================================================
+// STUDENTS DIRECTORY SUB-SHEET BACKEND (Auto-Fill by Student ID)
+// ==============================================================================
+const STUDENTS_SHEET_NAME = 'Students';
+const STUDENTS_ALT_SHEET_NAME = 'ข้อมูลนักศึกษา';
+const STUDENTS_HEADERS = [
+  'รหัสนักศึกษา',            // A (0)
+  'ชื่อ-นามสกุล',            // B (1)
+  'เพศ',                     // C (2)
+  'อายุ',                    // D (3)
+  'คณะ',                     // E (4)
+  'ชั้นปีที่',               // F (5)
+  'เบอร์โทรศัพท์กรณีฉุกเฉิน', // G (6)
+  'ประวัติแพ้ยา',            // H (7)
+  'ประวัติแพ้อาหาร',         // I (8)
+  'โรคประจำตัว',             // J (9)
+  'กลุ่มเสี่ยง',             // K (10)
+  'เกณฑ์ที่เข้ากลุ่มเสี่ยง'  // L (11)
+];
+
+function getStudentsSheet(createIfMissing) {
+  let ss = null;
+  try {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  } catch (e) {
+    ss = null;
+  }
+  if (!ss) {
+    ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  }
+  let sheet = ss.getSheetByName(STUDENTS_SHEET_NAME) || ss.getSheetByName(STUDENTS_ALT_SHEET_NAME);
+  if (!sheet && createIfMissing) {
+    sheet = ss.insertSheet(STUDENTS_SHEET_NAME);
+    sheet.getRange(1, 1, 1, STUDENTS_HEADERS.length).setValues([STUDENTS_HEADERS]);
+    sheet.getRange(1, 1, 1, STUDENTS_HEADERS.length)
+      .setBackground('#4338ca')
+      .setFontColor('#ffffff')
+      .setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * ดึงฐานข้อมูลนักศึกษาทั้งหมดแบบ Compact Map เพื่อเก็บใน Local Cache ของเบราว์เซอร์
+ * รูปแบบแต่ละรายการ: [name, gender, age, facultyIdx, year, phone, drugAllergy, foodAllergy, disease, highRiskFlag, highRiskReason]
+ */
+function getStudentsDirectory() {
+  try {
+    const sheet = getStudentsSheet(false);
+    if (!sheet || sheet.getLastRow() <= 1) {
+      return {
+        success: true,
+        count: 0,
+        faculties: [],
+        data: {}
+      };
+    }
+    const lastRow = sheet.getLastRow();
+    const numCols = Math.min(Math.max(sheet.getLastColumn(), 12), 12);
+    const rows = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+    const faculties = [];
+    const facMap = {};
+    const data = {};
+    let count = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const id = String(r[0] !== undefined && r[0] !== null ? r[0] : '').trim();
+      if (!id) continue;
+
+      const name = String(r[1] || '').trim();
+      const gender = String(r[2] || '').trim();
+      const age = String(r[3] || '').trim();
+      const fac = String(r[4] || '').trim();
+      const year = String(r[5] || '').trim();
+      let phone = String(r[6] || '').trim();
+      if (phone && /^\d{8,9}$/.test(phone) && !phone.startsWith('0')) {
+        phone = '0' + phone;
+      }
+      const drug = String(r[7] || '').trim();
+      const food = String(r[8] || '').trim();
+      const disease = String(r[9] || '').trim();
+      const highRiskRaw = String(r[10] || '').trim();
+      const highRiskReason = String(r[11] || '').trim();
+
+      let facIdx = -1;
+      if (fac) {
+        if (facMap[fac] === undefined) {
+          facMap[fac] = faculties.length;
+          faculties.push(fac);
+        }
+        facIdx = facMap[fac];
+      }
+
+      const isHighRisk = (highRiskRaw === 'ใช่' || highRiskRaw.toLowerCase() === 'yes' || highRiskRaw === '1' || highRiskRaw.toLowerCase() === 'true') ? 1 : 0;
+
+      data[id] = [
+        name,
+        gender,
+        age,
+        facIdx,
+        year,
+        phone,
+        (drug === 'ไม่มี' || drug === '-') ? '' : drug,
+        (food === 'ไม่มี' || food === '-') ? '' : food,
+        (disease === 'ไม่มี' || disease === '-') ? '' : disease,
+        isHighRisk,
+        highRiskReason
+      ];
+      count++;
+    }
+
+    return {
+      success: true,
+      count: count,
+      faculties: faculties,
+      data: data
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * ค้นหาข้อมูลนักศึกษารายบุคคลจากรหัสนักศึกษา (Fallback กรณี Local Cache ยังไม่พร้อม)
+ */
+function lookupStudentById(studentId) {
+  try {
+    const targetId = String(studentId || '').trim();
+    if (!targetId) {
+      return { success: false, found: false, error: 'Missing studentId' };
+    }
+    const sheet = getStudentsSheet(false);
+    if (!sheet || sheet.getLastRow() <= 1) {
+      return { success: true, found: false, student: null };
+    }
+    const lastRow = sheet.getLastRow();
+    const idCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (let i = 0; i < idCol.length; i++) {
+      if (String(idCol[i][0]).trim() === targetId) {
+        const r = sheet.getRange(i + 2, 1, 1, 12).getValues()[0];
+        let phone = String(r[6] || '').trim();
+        if (phone && /^\d{8,9}$/.test(phone) && !phone.startsWith('0')) {
+          phone = '0' + phone;
+        }
+        const highRiskRaw = String(r[10] || '').trim();
+        const isHighRisk = (highRiskRaw === 'ใช่' || highRiskRaw.toLowerCase() === 'yes' || highRiskRaw === '1' || highRiskRaw.toLowerCase() === 'true') ? 1 : 0;
+        return {
+          success: true,
+          found: true,
+          studentId: targetId,
+          record: [
+            String(r[1] || '').trim(),
+            String(r[2] || '').trim(),
+            String(r[3] || '').trim(),
+            String(r[4] || '').trim(),
+            String(r[5] || '').trim(),
+            phone,
+            String(r[7] || '').trim() === 'ไม่มี' ? '' : String(r[7] || '').trim(),
+            String(r[8] || '').trim() === 'ไม่มี' ? '' : String(r[8] || '').trim(),
+            String(r[9] || '').trim() === 'ไม่มี' ? '' : String(r[9] || '').trim(),
+            isHighRisk,
+            String(r[11] || '').trim()
+          ]
+        };
+      }
+    }
+    return { success: true, found: false, student: null };
+  } catch (error) {
+    return { success: false, found: false, error: error.message };
+  }
+}
+
+/**
+ * นำเข้าข้อมูลนักศึกษาเป็น Batch ลงในแท็บ Students ของ Google Sheet
+ */
+function importStudentsBatch(payload) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    const sheet = getStudentsSheet(true);
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    const resetSheet = Boolean(payload.resetSheet);
+
+    if (resetSheet) {
+      sheet.clearContents();
+      sheet.getRange(1, 1, 1, STUDENTS_HEADERS.length).setValues([STUDENTS_HEADERS]);
+      sheet.getRange(1, 1, 1, STUDENTS_HEADERS.length)
+        .setBackground('#4338ca')
+        .setFontColor('#ffffff')
+        .setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
+
+    if (rows.length > 0) {
+      const startRow = sheet.getLastRow() + 1;
+      const normalizedRows = rows.map(function(r) {
+        const arr = [];
+        for (let c = 0; c < 12; c++) {
+          let v = r[c] !== undefined && r[c] !== null ? String(r[c]).trim() : '';
+          // Prefix phone numbers with apostrophe so Google Sheet preserves leading 0
+          if (c === 6 && v && /^0\d+$/.test(v)) {
+            v = "'" + v;
+          }
+          arr.push(v);
+        }
+        return arr;
+      });
+      sheet.getRange(startRow, 1, normalizedRows.length, 12).setValues(normalizedRows);
+    }
+
+    return {
+      success: true,
+      importedCount: rows.length,
+      totalRows: Math.max(0, sheet.getLastRow() - 1)
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  } finally {
+    lock.releaseLock();
+  }
 }
